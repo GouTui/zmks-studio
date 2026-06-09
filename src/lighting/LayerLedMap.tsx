@@ -184,10 +184,10 @@ export default function LayerLedMap({
             />
             {isIndicator && (
               <span
-                className="absolute bottom-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-sm border border-base-content/15 bg-base-100/95 text-base-content/50"
+                className="absolute inset-0 flex items-center justify-center text-base-content/70"
                 title={indicatorTitle}
               >
-                <IndicatorIcon className="h-3 w-3" aria-hidden />
+                <IndicatorIcon className="h-4 w-4" aria-hidden />
               </span>
             )}
             {!bgColor && !isIndicator && (
