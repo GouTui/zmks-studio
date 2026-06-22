@@ -10,6 +10,7 @@ import {
 } from "@fortawesome/free-brands-svg-icons";
 import { DownloadIcon } from "lucide-react";
 import releaseData from "./data/release-data.json";
+import { withBasePath } from "./misc/baseUrl";
 
 type Platform = "windows" | "mac" | "linux" | "ios" | "android" | "unknown";
 
@@ -81,7 +82,8 @@ const PlatformLinks: Record<Platform, DownloadLink[]> = {
 };
 
 const ReleaseAssets = releaseData.assets.map((asset: any) => asset.browser_download_url);
-const ReleaseVersion = "v0.3-lts";
+const ReleaseVersion = releaseData.tag_name || "v0.3-lts";
+const ReleasePage = releaseData.html_url || "https://github.com/ph-design/zmks-studio/releases";
 
 function detectPlatform(): Platform {
   if (typeof window === "undefined") return "unknown";
@@ -120,7 +122,7 @@ export const Download = () => {
       <div className="bg-base-100 rounded-lg px-5 py-3 mb-6 max-w-md w-full text-center text-sm opacity-80">
         {t("download.disclaimer")}
       </div>
-      <img src="/zmk-mac-app-icon.webp" alt="ZMKs Studio" className="w-64" />
+      <img src={withBasePath("zmk-mac-app-icon.webp")} alt="ZMKs Studio" className="w-64" />
       <div className="text-3xl mb-1">ZMKs Studio</div>
       <div className="text-md mb-1 opacity-70">
         {ReleaseVersion}
@@ -173,7 +175,7 @@ export const Download = () => {
       </div>
       <a
         className="text-md hover:underline"
-        href="https://github.com/ph-design/zmks-studio/releases"
+        href={ReleasePage}
       >
         {t("download.seeReleases")}
       </a>

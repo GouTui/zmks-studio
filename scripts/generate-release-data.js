@@ -6,6 +6,15 @@ const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.resolve(__filename, "../..");
 
 async function generateReleaseData() {
+  const releaseRepo =
+    process.env.VITE_RELEASE_REPO ||
+    process.env.GITHUB_REPOSITORY ||
+    "ph-design/zmks-studio";
+  const fallbackData = {
+    assets: [],
+    tag_name: "dev",
+    html_url: `https://github.com/${releaseRepo}/releases`,
+  };
   const dataFilePath = path.resolve(
     __dirname,
     "src",
@@ -15,7 +24,7 @@ async function generateReleaseData() {
 
   try {
     const response = await fetch(
-      "https://api.github.com/repos/ph-design/zmk-studio/releases/latest",
+      `https://api.github.com/repos/${releaseRepo}/releases/latest`,
       {
         headers: process.env.GITHUB_TOKEN
           ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` }
@@ -38,10 +47,11 @@ async function generateReleaseData() {
       console.warn(error);
       return;
     } catch {
-      console.error("Error generating release data:", error);
+      console.warn("Failed to fetch release data; writing a fallback release-data.json.");
+      console.warn(error);
+      await fs.mkdir(path.dirname(dataFilePath), { recursive: true });
+      await fs.writeFile(dataFilePath, JSON.stringify(fallbackData));
     }
-
-    process.exit(1);
   }
 }
 

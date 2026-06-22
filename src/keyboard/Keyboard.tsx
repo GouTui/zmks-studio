@@ -26,6 +26,7 @@ import type {
   BacklightState,
   CapsLockIndicatorState,
   ConnectionIndicatorState,
+  LowBatteryIndicatorState,
 } from "@zmkfirmware/zmk-studio-ts-client/lighting";
 
 import { LayerPicker } from "./LayerPicker";
@@ -37,7 +38,7 @@ import { UndoRedoContext } from "../undoRedo";
 import { BehaviorBindingPicker } from "../behaviors/BehaviorBindingPicker";
 import { produce } from "immer";
 import { LockStateContext } from "../rpc/LockStateContext";
-import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
+import { LockState, PowerSettingsState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { deserializeLayoutZoom, LayoutZoom } from "./PhysicalLayout";
 import { useLocalStorageState } from "../misc/useLocalStorageState";
 import { useTranslation } from "react-i18next";
@@ -230,17 +231,26 @@ export default function Keyboard({ onReady, onProgress, onLightingChanged }: Key
   const [backlightState, setBacklightState] = useState<BacklightState | null>(null);
   const [capsLockState, setCapsLockState] = useState<CapsLockIndicatorState | null>(null);
   const [connectionState, setConnectionState] = useState<ConnectionIndicatorState | null>(null);
+  const [lowBatteryState, setLowBatteryState] = useState<LowBatteryIndicatorState | null>(null);
+  const [powerSettings, setPowerSettings] = useState<PowerSettingsState | null>(null);
   const [hasRgb, setHasRgb] = useState(false);
   const [hasBacklight, setHasBacklight] = useState(false);
   const [hasCapsLock, setHasCapsLock] = useState(false);
   const [hasConnection, setHasConnection] = useState(false);
+  const [hasLowBattery, setHasLowBattery] = useState(false);
+  const [hasPowerSettings, setHasPowerSettings] = useState(false);
   const [lightingLoaded, setLightingLoaded] = useState(false);
+  const [powerLoaded, setPowerLoaded] = useState(false);
   const [indicatorPositionDraft, setIndicatorPositionDraft] = useState<IndicatorPositionDraft | undefined>(undefined);
   const [lightingSource, setLightingSource] = useState<string>("rgb");
 
   const handleIndicatorPick = useCallback(
     (positions: Set<number>) => {
-      if (lightingSource !== "capslock" && lightingSource !== "connection") {
+      if (
+        lightingSource !== "capslock" &&
+        lightingSource !== "connection" &&
+        lightingSource !== "lowBattery"
+      ) {
         return false;
       }
 
@@ -267,9 +277,20 @@ export default function Keyboard({ onReady, onProgress, onLightingChanged }: Key
       set.add(capsLockState.keyPosition);
     } else if (lightingSource === "connection" && connectionState?.enabled && connectionState.keyPosition !== undefined) {
       set.add(connectionState.keyPosition);
+    } else if (lightingSource === "lowBattery" && lowBatteryState?.enabled && lowBatteryState.keyPosition !== undefined) {
+      set.add(lowBatteryState.keyPosition);
     }
     return set;
-  }, [lightingSource, capsLockState?.enabled, capsLockState?.keyPosition, connectionState?.enabled, connectionState?.keyPosition, indicatorPositionDraft]);
+  }, [
+    lightingSource,
+    capsLockState?.enabled,
+    capsLockState?.keyPosition,
+    connectionState?.enabled,
+    connectionState?.keyPosition,
+    indicatorPositionDraft,
+    lowBatteryState?.enabled,
+    lowBatteryState?.keyPosition,
+  ]);
 
   const conn = useContext(ConnectionContext);
   const lockState = useContext(LockStateContext);
@@ -287,23 +308,29 @@ export default function Keyboard({ onReady, onProgress, onLightingChanged }: Key
     setBacklightState(null);
     setCapsLockState(null);
     setConnectionState(null);
+    setLowBatteryState(null);
+    setPowerSettings(null);
     setIndicatorPositionDraft(undefined);
     setHasRgb(false);
     setHasBacklight(false);
     setHasCapsLock(false);
     setHasConnection(false);
+    setHasLowBattery(false);
+    setHasPowerSettings(false);
     setLightingLoaded(false);
+    setPowerLoaded(false);
   }, [conn]);
 
   const fetchAllLighting = useCallback(async (ignore?: { current: boolean }) => {
     if (!conn.conn) return;
 
-    const [ledResp, rgbResp, blResp, capsResp, connResp] = await Promise.allSettled([
+    const [ledResp, rgbResp, blResp, capsResp, connResp, lowBatteryResp] = await Promise.allSettled([
       call_rpc(conn.conn, { lighting: { getLayerLedColors: true } }),
       call_rpc(conn.conn, { lighting: { getRgbUnderglowState: true } }),
       call_rpc(conn.conn, { lighting: { getBacklightState: true } }),
       call_rpc(conn.conn, { lighting: { getCapsLockIndicator: true } }),
       call_rpc(conn.conn, { lighting: { getConnectionIndicator: true } }),
+      call_rpc(conn.conn, { lighting: { getLowBatteryIndicator: true } }),
     ]);
 
     if (ignore?.current) return;
@@ -328,7 +355,33 @@ export default function Keyboard({ onReady, onProgress, onLightingChanged }: Key
       setConnectionState(connResp.value.lighting.getConnectionIndicator);
       setHasConnection(true);
     }
+    if (lowBatteryResp.status === "fulfilled" && lowBatteryResp.value.lighting?.getLowBatteryIndicator) {
+      setLowBatteryState(lowBatteryResp.value.lighting.getLowBatteryIndicator);
+      setHasLowBattery(true);
+    }
     setLightingLoaded(true);
+  }, [conn]);
+
+  const fetchPowerSettings = useCallback(async (ignore?: { current: boolean }) => {
+    if (!conn.conn) return;
+
+    try {
+      const response = await call_rpc(conn.conn, { core: { getPowerSettings: true } });
+      if (ignore?.current) {
+        return;
+      }
+
+      if (response.core?.getPowerSettings) {
+        setPowerSettings(response.core.getPowerSettings);
+        setHasPowerSettings(true);
+      }
+    } catch (e) {
+      console.error("Failed to load power settings", e);
+    } finally {
+      if (!ignore?.current) {
+        setPowerLoaded(true);
+      }
+    }
   }, [conn]);
 
   useEffect(() => {
@@ -344,13 +397,27 @@ export default function Keyboard({ onReady, onProgress, onLightingChanged }: Key
   }, [conn, isUnlocked, fetchAllLighting]);
 
   useEffect(() => {
+    setPowerLoaded(false);
+
+    if (!conn.conn || !isUnlocked) {
+      return;
+    }
+
+    const ignore = { current: false };
+    fetchPowerSettings(ignore);
+    return () => {
+      ignore.current = true;
+    };
+  }, [conn, isUnlocked, fetchPowerSettings]);
+
+  useEffect(() => {
     if (!conn.conn || !isUnlocked) {
       onReady?.(false);
       onProgress?.(0);
       return;
     }
 
-    const stages = [!!keymap, !!layouts, behaviorsLoaded, lightingLoaded];
+    const stages = [!!keymap, !!layouts, behaviorsLoaded, lightingLoaded, powerLoaded];
     const loadedCount = stages.filter(Boolean).length;
     onProgress?.(loadedCount / stages.length);
 
@@ -849,7 +916,12 @@ export default function Keyboard({ onReady, onProgress, onLightingChanged }: Key
                 <IdlePanel />
               )
             ) : bottomTab === "other" ? (
-              <OtherPanel behaviors={Object.values(behaviors)} />
+              <OtherPanel
+                behaviors={Object.values(behaviors)}
+                powerSettings={powerSettings}
+                setPowerSettings={setPowerSettings}
+                hasPowerSettings={hasPowerSettings}
+              />
             ) : (
               <LightingControl
                 hasLayerLed={hasLayerLed}
@@ -868,10 +940,13 @@ export default function Keyboard({ onReady, onProgress, onLightingChanged }: Key
                 setCapsLockState={setCapsLockState}
                 connectionState={connectionState}
                 setConnectionState={setConnectionState}
+                lowBatteryState={lowBatteryState}
+                setLowBatteryState={setLowBatteryState}
                 hasRgb={hasRgb}
                 hasBacklight={hasBacklight}
                 hasCapsLock={hasCapsLock}
                 hasConnection={hasConnection}
+                hasLowBattery={hasLowBattery}
                 indicatorPositionDraft={indicatorPositionDraft}
                 onSourceChange={handleLightingSourceChanged}
                 onClearIndicator={() => setIndicatorPositionDraft(undefined)}

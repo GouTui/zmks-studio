@@ -50,10 +50,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          node-version: 20
+          cache: npm
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable # Set this to dtolnay/rust-toolchain@nightly
@@ -66,14 +67,8 @@ jobs:
         with:
           workspaces: "./src-tauri -> target"
 
-      - name: Configure GitHub Packages auth
-        shell: bash
-        run: echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> .npmrc
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GH_PKG_TOKEN }}
-
       - name: install frontend dependencies
-        run: bun install --frozen-lockfile
+        run: npm ci
 
       - uses: tauri-apps/tauri-action@v0
         name: build

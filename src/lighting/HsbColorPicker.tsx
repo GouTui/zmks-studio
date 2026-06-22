@@ -8,6 +8,12 @@ export interface HsbColor {
   b: number; // 0-100
 }
 
+interface RgbColor {
+  r: number;
+  g: number;
+  b: number;
+}
+
 function hsbToHsl(h: number, s: number, b: number) {
   const s01 = s / 100;
   const b01 = b / 100;
@@ -76,6 +82,18 @@ export function hsbToRgb(hsb: HsbColor): number {
 /** Convert 0xRRGGBB to CSS hex string */
 export function colorToHex(color: number): string {
   return "#" + (color & 0xffffff).toString(16).padStart(6, "0");
+}
+
+export function rgbNumberToChannels(color: number): RgbColor {
+  return {
+    r: (color >> 16) & 0xff,
+    g: (color >> 8) & 0xff,
+    b: color & 0xff,
+  };
+}
+
+export function rgbChannelsToNumber({ r, g, b }: RgbColor): number {
+  return ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
 }
 
 function hsbToCssColor(h: number, s: number, b: number): string {
@@ -279,6 +297,7 @@ export default function HsbColorPicker({
     () => hsbToCssColor(hsb.h, hsb.s, hsb.b),
     [hsb]
   );
+  const rgbColor = useMemo(() => rgbNumberToChannels(hsbToRgb(hsb)), [hsb]);
 
   const hueTrack: React.CSSProperties = useMemo(
     () => ({
@@ -300,6 +319,35 @@ export default function HsbColorPicker({
       background: `linear-gradient(to right, ${hsbToCssColor(hsb.h, hsb.s, 0)}, ${hsbToCssColor(hsb.h, hsb.s, 100)})`,
     }),
     [hsb.h, hsb.s]
+  );
+
+  const redTrack: React.CSSProperties = useMemo(
+    () => ({
+      background: `linear-gradient(to right, rgb(0 ${rgbColor.g} ${rgbColor.b}), rgb(255 ${rgbColor.g} ${rgbColor.b}))`,
+    }),
+    [rgbColor.b, rgbColor.g]
+  );
+
+  const greenTrack: React.CSSProperties = useMemo(
+    () => ({
+      background: `linear-gradient(to right, rgb(${rgbColor.r} 0 ${rgbColor.b}), rgb(${rgbColor.r} 255 ${rgbColor.b}))`,
+    }),
+    [rgbColor.b, rgbColor.r]
+  );
+
+  const blueTrack: React.CSSProperties = useMemo(
+    () => ({
+      background: `linear-gradient(to right, rgb(${rgbColor.r} ${rgbColor.g} 0), rgb(${rgbColor.r} ${rgbColor.g} 255))`,
+    }),
+    [rgbColor.g, rgbColor.r]
+  );
+
+  const setRgbChannel = useCallback(
+    (channel: keyof RgbColor, value: number) => {
+      const nextRgb = { ...rgbColor, [channel]: value };
+      onHsbChanged(rgbToHsb(rgbChannelsToNumber(nextRgb)));
+    },
+    [onHsbChanged, rgbColor]
   );
 
   return (
@@ -343,6 +391,33 @@ export default function HsbColorPicker({
         disabled={disabled}
         trackStyle={brtTrack}
         onChange={(b) => onHsbChanged({ ...hsb, b })}
+      />
+      <ColorSliderRow
+        label="R"
+        value={rgbColor.r}
+        min={0}
+        max={255}
+        disabled={disabled}
+        trackStyle={redTrack}
+        onChange={(r) => setRgbChannel("r", r)}
+      />
+      <ColorSliderRow
+        label="G"
+        value={rgbColor.g}
+        min={0}
+        max={255}
+        disabled={disabled}
+        trackStyle={greenTrack}
+        onChange={(g) => setRgbChannel("g", g)}
+      />
+      <ColorSliderRow
+        label="B"
+        value={rgbColor.b}
+        min={0}
+        max={255}
+        disabled={disabled}
+        trackStyle={blueTrack}
+        onChange={(b) => setRgbChannel("b", b)}
       />
     </div>
   );

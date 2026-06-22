@@ -1,0 +1,49 @@
+{
+  "name": "@zmkfirmware/zmk-studio-ts-client",
+  "version": "0.0.18",
+  "description": "RPC client library for interacting with ZMK Studio enabled keyboards",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js"
+    },
+    "./*": {
+      "types": "./lib/*.d.ts",
+      "import": "./lib/*.js"
+    }
+  },
+  "files": [
+    "lib/**/*"
+  ],
+  "scripts": {
+    "postinstall": "node -e \"process.exit(0)\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zmkfirmware/zmk-studio-ts-client.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "ZMK Project",
+    "email": "petejohason@users.noreply.github.com",
+    "url": "https://github.com/zmkfirmware"
+  },
+  "engines": {
+    "node": ">=12.0"
+  },
+  "keywords": [
+    "typescript",
+    "rpc",
+    "protobuf",
+    "mechanical-keyboards"
+  ],
+  "bugs": {
+    "url": "https://github.com/zmkfirmware/zmk-studio-ts-client/issues"
+  },
+  "homepage": "https://github.com/zmkfirmware/zmk#readme",
+  "dependencies": {
+    "async-mutex": "^0.5.0",
+    "protobufjs": "^7.3.2"
+  }
+}

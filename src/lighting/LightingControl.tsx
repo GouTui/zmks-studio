@@ -16,17 +16,26 @@ import type {
   GetLayerLedColorsResponse,
   SetCapsLockIndicatorRequest,
   SetConnectionIndicatorRequest,
+  LowBatteryIndicatorState,
+  SetLowBatteryIndicatorRequest,
 } from "@zmkfirmware/zmk-studio-ts-client/lighting";
 import type { Keymap } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import type { IndicatorPositionDraft } from "../keyboard/Keyboard";
 
 import HsbColorPicker, {
   type HsbColor,
+  colorToHex,
   rgbToHsb,
   hsbToRgb,
 } from "./HsbColorPicker";
 
-type LightSource = "rgb" | "backlight" | "capslock" | "connection" | "layerLed";
+type LightSource =
+  | "rgb"
+  | "backlight"
+  | "capslock"
+  | "connection"
+  | "layerLed"
+  | "lowBattery";
 
 const ANY_LAYER_ID = 0xff;
 
@@ -47,10 +56,13 @@ export interface LightingControlProps {
   setCapsLockState: React.Dispatch<React.SetStateAction<CapsLockIndicatorState | null>>;
   connectionState?: ConnectionIndicatorState | null;
   setConnectionState?: React.Dispatch<React.SetStateAction<ConnectionIndicatorState | null>>;
+  lowBatteryState?: LowBatteryIndicatorState | null;
+  setLowBatteryState?: React.Dispatch<React.SetStateAction<LowBatteryIndicatorState | null>>;
   hasRgb: boolean;
   hasBacklight: boolean;
   hasCapsLock: boolean;
   hasConnection?: boolean;
+  hasLowBattery?: boolean;
   indicatorPositionDraft?: IndicatorPositionDraft;
   onSourceChange?: (source: LightSource) => void;
   onClearIndicator?: () => void;
@@ -73,6 +85,12 @@ const connectionIndicatorFieldOrder: (keyof SetConnectionIndicatorRequest)[] = [
   "layerId",
 ];
 
+const lowBatteryIndicatorFieldOrder: (keyof SetLowBatteryIndicatorRequest)[] = [
+  "enabled",
+  "keyPosition",
+  "periodMs",
+];
+
 export default function LightingControl({
   hasLayerLed,
   selectedLedPositions,
@@ -90,10 +108,13 @@ export default function LightingControl({
   setCapsLockState,
   connectionState,
   setConnectionState,
+  lowBatteryState,
+  setLowBatteryState,
   hasRgb,
   hasBacklight,
   hasCapsLock,
   hasConnection,
+  hasLowBattery,
   indicatorPositionDraft,
   onSourceChange,
   onClearIndicator,
@@ -177,8 +198,14 @@ export default function LightingControl({
       setSelectedSource("backlight");
     } else if (hasLayerLed) {
       setSelectedSource("layerLed");
+    } else if (hasCapsLock) {
+      setSelectedSource("capslock");
+    } else if (hasConnection) {
+      setSelectedSource("connection");
+    } else if (hasLowBattery) {
+      setSelectedSource("lowBattery");
     }
-  }, [hasRgb, hasBacklight, hasLayerLed]);
+  }, [hasRgb, hasBacklight, hasLayerLed, hasCapsLock, hasConnection, hasLowBattery]);
 
   useEffect(() => {
     onSourceChange?.(selectedSource);
@@ -286,6 +313,39 @@ export default function LightingControl({
     [conn, setConnectionState, onLightingChanged]
   );
 
+  const setLowBatteryProp = useCallback(
+    async (props: Partial<SetLowBatteryIndicatorRequest>) => {
+      if (!conn.conn) return false;
+      const applied: Partial<SetLowBatteryIndicatorRequest> = {};
+      try {
+        for (const field of lowBatteryIndicatorFieldOrder) {
+          const value = props[field];
+          if (value === undefined) continue;
+
+          const request = { [field]: value } as Partial<SetLowBatteryIndicatorRequest>;
+          const resp = await call_rpc(conn.conn, {
+            lighting: { setLowBatteryIndicator: request },
+          });
+          if (!resp.lighting?.setLowBatteryIndicator) {
+            console.error("Failed to set low battery indicator", resp);
+            return false;
+          }
+          Object.assign(applied, request);
+        }
+
+        if (Object.keys(applied).length > 0) {
+          setLowBatteryState?.((prev) => (prev ? { ...prev, ...applied } : prev));
+          onLightingChanged?.();
+        }
+        return true;
+      } catch (e) {
+        console.error("Failed to set low battery indicator", e);
+        return false;
+      }
+    },
+    [conn, setLowBatteryState, onLightingChanged]
+  );
+
   const effectNames = useMemo(() => {
     if (!rgbState) return [];
     if (rgbState.effectNames && rgbState.effectNames.length > 0) {
@@ -299,7 +359,7 @@ export default function LightingControl({
     return null;
   }
 
-  if (!hasRgb && !hasBacklight && !hasCapsLock && !hasConnection && !hasLayerLed) {
+  if (!hasRgb && !hasBacklight && !hasCapsLock && !hasConnection && !hasLayerLed && !hasLowBattery) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-3 px-8">
         <AlertTriangle className="w-8 h-8 text-warning" />
@@ -318,6 +378,7 @@ export default function LightingControl({
   const isCapsSelected = selectedSource === "capslock" && hasCapsLock;
   const isConnSelected = selectedSource === "connection" && !!hasConnection;
   const isLayerLedSelected = selectedSource === "layerLed" && hasLayerLed;
+  const isLowBatterySelected = selectedSource === "lowBattery" && !!hasLowBattery;
 
   const selectedLayerId = keymap?.layers[selectedLayerIndex ?? 0]?.id;
   const capsStoredAllLayers = capsLockState?.layerId === ANY_LAYER_ID;
@@ -339,6 +400,8 @@ export default function LightingControl({
         ok = await setCapsLockProp(position);
       } else if (isConnSelected) {
         ok = await setConnectionProp(position);
+      } else if (isLowBatterySelected) {
+        ok = await setLowBatteryProp({ keyPosition: draft.keyPosition });
       }
 
       if (ok && !cancelled) {
@@ -350,7 +413,17 @@ export default function LightingControl({
     return () => {
       cancelled = true;
     };
-  }, [resolvedIndicatorLayerId, indicatorPositionDraft, isCapsSelected, isConnSelected, onClearIndicator, setCapsLockProp, setConnectionProp]);
+  }, [
+    resolvedIndicatorLayerId,
+    indicatorPositionDraft,
+    isCapsSelected,
+    isConnSelected,
+    isLowBatterySelected,
+    onClearIndicator,
+    setCapsLockProp,
+    setConnectionProp,
+    setLowBatteryProp,
+  ]);
 
   const setIndicatorAllLayers = (allLayers: boolean) => {
     async function apply() {
@@ -394,6 +467,8 @@ export default function LightingControl({
       {renderIndicatorScopeSelect(position.layerId === ANY_LAYER_ID)}
     </>
   );
+
+  const lowBatteryColorHex = lowBatteryState ? colorToHex(lowBatteryState.color).toUpperCase() : "#000000";
 
   return (
     <div className="flex gap-0 min-h-0 h-full">
@@ -449,6 +524,19 @@ export default function LightingControl({
           >
             <Wifi className="w-4 h-4 flex-shrink-0" />
             <span>{t("lighting.connection.title")}</span>
+          </button>
+        )}
+        {hasLowBattery && (
+          <button
+            onClick={() => setSelectedSource("lowBattery")}
+            className={`flex items-center gap-2 px-3 py-2 rounded text-sm cursor-pointer transition-colors text-left ${
+              isLowBatterySelected
+                ? "bg-primary text-primary-content"
+                : "text-base-content hover:bg-base-300"
+            }`}
+          >
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <span>{t("lighting.lowBattery.title", "Low Battery")}</span>
           </button>
         )}
         {hasLayerLed && (
@@ -751,6 +839,93 @@ export default function LightingControl({
                   }}
                   disabled={!isUnlocked}
                 />
+              </div>
+            </div>
+          </>
+        )}
+
+        {isLowBatterySelected && lowBatteryState && (
+          <>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setLowBatteryProp({ enabled: true })}
+                disabled={!isUnlocked}
+                className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors whitespace-nowrap ${
+                  lowBatteryState.enabled
+                    ? "bg-primary text-primary-content"
+                    : "text-base-content hover:bg-base-300"
+                }`}
+              >
+                {t("lighting.on")}
+              </button>
+              <button
+                onClick={() => setLowBatteryProp({ enabled: false })}
+                disabled={!isUnlocked}
+                className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors whitespace-nowrap ${
+                  !lowBatteryState.enabled
+                    ? "bg-primary text-primary-content"
+                    : "text-base-content hover:bg-base-300"
+                }`}
+              >
+                {t("lighting.off")}
+              </button>
+
+              <span className="w-px h-5 bg-base-300 mx-1.5" />
+              <span className="text-sm text-base-content/60">
+                {t("lighting.indicator.positionLabel", {
+                  pos: indicatorPositionDraft?.keyPosition ?? lowBatteryState.keyPosition,
+                  defaultValue: `Key ${indicatorPositionDraft?.keyPosition ?? lowBatteryState.keyPosition}`,
+                })}
+              </span>
+            </div>
+
+            <div className={`flex flex-col gap-3 ${!lowBatteryState.enabled ? "opacity-40 pointer-events-none" : ""}`}>
+              <div className="text-sm text-base-content/60">
+                {t(
+                  "lighting.lowBattery.pickHint",
+                  "Click a key above to change which key flashes when the battery is low."
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                <Label className="text-sm text-base-content/60 w-28 shrink-0">
+                  {t("lighting.lowBattery.period", "Blink period")}
+                </Label>
+                <input
+                  type="number"
+                  min={250}
+                  step={250}
+                  value={lowBatteryState.periodMs}
+                  onChange={(e) =>
+                    setLowBatteryProp({ periodMs: Number(e.target.value) || 0 })
+                  }
+                  disabled={!isUnlocked}
+                  className="w-28 rounded border border-base-300 bg-base-100 px-2 py-1 text-sm"
+                />
+                <span className="text-sm text-base-content/50">ms</span>
+              </div>
+              <div className="grid gap-2 rounded border border-base-300 bg-base-100/50 p-3 text-sm">
+                <div className="flex items-center gap-3">
+                  <span className="text-base-content/60 w-28 shrink-0">
+                    {t("lighting.lowBattery.color", "Flash color")}
+                  </span>
+                  <span
+                    className="h-5 w-10 rounded border border-base-300"
+                    style={{ backgroundColor: lowBatteryColorHex }}
+                  />
+                  <span className="font-mono text-base-content/70">{lowBatteryColorHex}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-base-content/60 w-28 shrink-0">
+                    {t("lighting.lowBattery.threshold", "Threshold")}
+                  </span>
+                  <span>{lowBatteryState.thresholdPct}%</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-base-content/60 w-28 shrink-0">
+                    {t("lighting.lowBattery.duration", "Flash duration")}
+                  </span>
+                  <span>{lowBatteryState.flashDurationMs} ms</span>
+                </div>
               </div>
             </div>
           </>

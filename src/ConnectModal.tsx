@@ -16,6 +16,7 @@ import {
 import { useModalRef } from "./misc/useModalRef";
 import { ExternalLink } from "./misc/ExternalLink";
 import { GenericModal } from "./GenericModal";
+import { withBasePath } from "./misc/baseUrl";
 
 export type TransportFactory = {
   label: string;
@@ -199,19 +200,15 @@ function ConnectionMethodCards({
       label: "USB",
       icon: Cable,
       transport: transports.find(isUsbTransport),
-      description: t("welcome.usbConnectionDescription"),
-    },
-    {
-      id: "ble",
-      label: "BLE",
-      icon: Bluetooth,
-      transport: transports.find(isWirelessTransport),
-      description: t("welcome.bleConnectionDescription"),
+      description: t(
+        "welcome.usbConnectionDescription",
+        "Connect to the keyboard over USB serial"
+      ),
     },
   ];
 
   return (
-    <div className="grid gap-2 sm:grid-cols-2">
+    <div className="grid gap-2">
       {methods.map((method) => {
         const Icon = method.icon;
         const available = !!method.transport;
@@ -438,7 +435,12 @@ function DeviceList({
       <div className="grid grid-cols-[1fr_auto] items-start gap-3">
         <div>
           <h2 className="text-lg font-semibold">{t("welcome.selectDevice")}</h2>
-          <p className="text-sm opacity-75">{t("welcome.deviceListHint")}</p>
+          <p className="text-sm opacity-75">
+            {t(
+              "welcome.deviceListHint",
+              "The app scans USB devices automatically. Choose your keyboard to connect."
+            )}
+          </p>
         </div>
         <Button
           className="inline-flex items-center gap-2 rounded-md border border-base-300 px-3 py-2 text-sm transition-colors hover:bg-base-200 disabled:opacity-60"
@@ -559,7 +561,12 @@ function SimpleDevicePicker({
     <div className="space-y-3">
       <div>
         <h2 className="text-base font-medium">{t("welcome.selectConnection")}</h2>
-        <p className="text-sm opacity-75">{t("welcome.webConnectionHint")}</p>
+        <p className="text-sm opacity-75">
+          {t(
+            "welcome.webConnectionHint",
+            "Browser USB connections will ask for serial permission. Choose your keyboard in the picker that appears."
+          )}
+        </p>
       </div>
       <ConnectionMethodCards
         transports={transports}
@@ -590,27 +597,44 @@ function SimpleDevicePicker({
 
 function NoTransportsOptionsPrompt() {
   const { t } = useTranslation();
+  const downloadHref = withBasePath("download.html");
   return (
     <div className="flex flex-col gap-3 rounded-md border border-base-300 p-4">
-      <h2 className="text-base font-medium">{t("welcome.unsupportedTitle")}</h2>
+      <h2 className="text-base font-medium">
+        {t("welcome.unsupportedTitle", "This browser cannot access USB serial")}
+      </h2>
       <ConnectionMethodCards transports={[]} />
       <p>
-        {t("welcome.unsupportedPrefix")} {" "}
-        <ExternalLink href="https://caniuse.com/web-serial">Web Serial</ExternalLink> {" "}
-        {t("welcome.unsupportedMiddle")} {" "}
-        <ExternalLink href="https://caniuse.com/web-bluetooth">Web Bluetooth</ExternalLink> {" "}
-        {t("welcome.unsupportedSuffix")}
+        {t(
+          "welcome.unsupportedPrefix",
+          "Use a browser with"
+        )}{" "}
+        <ExternalLink href="https://caniuse.com/web-serial">Web Serial</ExternalLink>{" "}
+        {t(
+          "welcome.unsupportedSuffix",
+          "support to connect to the keyboard over USB."
+        )}
       </p>
 
       <div>
-        <p className="font-medium">{t("welcome.unsupportedOptions")}</p>
+        <p className="font-medium">
+          {t("welcome.unsupportedOptions", "To use this build:")}
+        </p>
         <ul className="list-disc list-inside">
           <li>
-            {t("welcome.chromeBrowser")}
+            {t(
+              "welcome.chromeBrowser",
+              "Open the page in Chrome or Edge on desktop."
+            )}
           </li>
           <li>
-            {t("welcome.downloadAppPrefix")} {" "}
-            <ExternalLink href="/download">{t("welcome.crossPlatformApp")}</ExternalLink>
+            {t(
+              "welcome.downloadAppPrefix",
+              "If you later want a packaged build, open the"
+            )}{" "}
+            <ExternalLink href={downloadHref}>
+              {t("welcome.crossPlatformApp", "download page")}
+            </ExternalLink>
             .
           </li>
         </ul>
@@ -646,21 +670,25 @@ function ClientRecommendation() {
   return (
     <section className="grid gap-3 rounded-md border border-base-300 p-3 transition-colors duration-150 sm:grid-cols-[1fr_auto] sm:items-center">
       <div>
-        <p className="font-medium">{t("welcome.clientTitle")}</p>
+        <p className="font-medium">
+          {t("welcome.clientTitle", "USB browser connection is the primary path")}
+        </p>
         <p className="text-sm opacity-75">
-          {t("welcome.clientDescriptionPrefix")} {" "}
-          <ExternalLink href="https://caniuse.com/web-serial">Web Serial</ExternalLink> / {" "}
-          <ExternalLink href="https://caniuse.com/web-bluetooth">Web Bluetooth</ExternalLink> {" "}
-          {t("welcome.clientDescriptionSuffix")}
+          {t(
+            "welcome.clientDescriptionPrefix",
+            "Use Chrome or Edge with"
+          )}{" "}
+          <ExternalLink href="https://caniuse.com/web-serial">Web Serial</ExternalLink>{" "}
+          {t(
+            "welcome.clientDescriptionSuffix",
+            "enabled. BLE is intentionally hidden in this build for now."
+          )}
         </p>
       </div>
-      <a
-        className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-content hover:opacity-85"
-        href="/download"
-      >
+      <div className="inline-flex items-center justify-center gap-2 rounded-md bg-base-200 px-3 py-2 text-sm">
         <Download className="size-4" />
-        {t("welcome.downloadClient")}
-      </a>
+        USB Only
+      </div>
     </section>
   );
 }
@@ -715,12 +743,13 @@ export const ConnectModal = ({
     displayView === "options"
       ? "backdrop:bg-[rgba(0,0,0,0.5)]"
       : "backdrop:bg-[rgba(0,0,0,0.72)]";
+  const logoSrc = withBasePath("zmk.svg");
 
   return (
     <GenericModal ref={dialog} backdropClassName={backdropClassName} className="w-[min(92vw,42rem)] max-h-[90vh] overflow-y-auto">
       <div className="flex items-start justify-between gap-4">
         <div className="grid grid-cols-[auto_1fr] items-center gap-3">
-          <img src="/zmk.svg" alt="ZMK Logo" className="size-10 rounded-md" />
+          <img src={logoSrc} alt="ZMK Logo" className="size-10 rounded-md" />
           <div>
             <h1 className="text-xl font-semibold">{t("welcome.title")}</h1>
             <p className="text-sm opacity-75">{t("welcome.subtitle")}</p>
