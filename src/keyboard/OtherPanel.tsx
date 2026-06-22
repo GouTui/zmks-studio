@@ -710,7 +710,7 @@ const PowerActionBar = ({
             修改后点击保存
           </div>
           <div className="mt-1 text-sm leading-6 text-base-content/60">
-            现在按分钟显示。保存后立即写入键盘。
+            现在按分钟显示。保存后立即写入键盘，但这些休眠参数只在电池模式下生效。
           </div>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
@@ -789,7 +789,7 @@ const PowerSettingsEditor = ({
       />
 
       <div className="rounded-xl border border-base-300 bg-base-100/60 p-4 text-sm leading-6 text-base-content/65">
-        单位已改成分钟。数值越小越省电，数值越大越不容易休眠。
+        单位已改成分钟。数值越小越省电，数值越大越不容易休眠。USB 供电时，这把键盘不会进入深度休眠，并且当前固件配置为跳过空闲休眠。
       </div>
     </div>
   );
