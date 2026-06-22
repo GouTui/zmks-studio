@@ -94,11 +94,16 @@ export interface LowBatteryIndicatorState {
     periodMs: number;
     thresholdPct: number;
     flashDurationMs: number;
+    demoEnabled: boolean;
 }
 export interface SetLowBatteryIndicatorRequest {
     enabled?: boolean | undefined;
     keyPosition?: number | undefined;
     periodMs?: number | undefined;
+    color?: number | undefined;
+    thresholdPct?: number | undefined;
+    flashDurationMs?: number | undefined;
+    demoEnabled?: boolean | undefined;
 }
 export interface Request {
     getRgbUnderglowState?: boolean | undefined;
@@ -703,19 +708,35 @@ export declare const SetLowBatteryIndicatorRequest: {
         enabled?: boolean | undefined;
         keyPosition?: number | undefined;
         periodMs?: number | undefined;
+        color?: number | undefined;
+        thresholdPct?: number | undefined;
+        flashDurationMs?: number | undefined;
+        demoEnabled?: boolean | undefined;
     } & {
         enabled?: boolean | undefined;
         keyPosition?: number | undefined;
         periodMs?: number | undefined;
+        color?: number | undefined;
+        thresholdPct?: number | undefined;
+        flashDurationMs?: number | undefined;
+        demoEnabled?: boolean | undefined;
     } & { [K in Exclude<keyof I, keyof SetLowBatteryIndicatorRequest>]: never; }>(base?: I | undefined): SetLowBatteryIndicatorRequest;
     fromPartial<I_1 extends {
         enabled?: boolean | undefined;
         keyPosition?: number | undefined;
         periodMs?: number | undefined;
+        color?: number | undefined;
+        thresholdPct?: number | undefined;
+        flashDurationMs?: number | undefined;
+        demoEnabled?: boolean | undefined;
     } & {
         enabled?: boolean | undefined;
         keyPosition?: number | undefined;
         periodMs?: number | undefined;
+        color?: number | undefined;
+        thresholdPct?: number | undefined;
+        flashDurationMs?: number | undefined;
+        demoEnabled?: boolean | undefined;
     } & { [K_1 in Exclude<keyof I_1, keyof SetLowBatteryIndicatorRequest>]: never; }>(object: I_1): SetLowBatteryIndicatorRequest;
 };
 export declare const Request: {

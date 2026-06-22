@@ -89,6 +89,10 @@ const lowBatteryIndicatorFieldOrder: (keyof SetLowBatteryIndicatorRequest)[] = [
   "enabled",
   "keyPosition",
   "periodMs",
+  "color",
+  "thresholdPct",
+  "flashDurationMs",
+  "demoEnabled",
 ];
 
 export default function LightingControl({
@@ -135,6 +139,7 @@ export default function LightingControl({
 
   const [connUsbHsb, setConnUsbHsb] = useState<HsbColor>({ h: 0, s: 0, b: 100 });
   const [connBtHsb, setConnBtHsb] = useState<HsbColor>({ h: 240, s: 100, b: 100 });
+  const [lowBatteryHsb, setLowBatteryHsb] = useState<HsbColor>({ h: 0, s: 100, b: 100 });
 
   const capsInitialized = useRef(false);
   const connInitialized = useRef(false);
@@ -159,6 +164,11 @@ export default function LightingControl({
     setConnUsbHsb(rgbToHsb(connectionState.usbColor));
     setConnBtHsb(rgbToHsb(connectionState.btColor));
   }, [connectionState]);
+
+  useEffect(() => {
+    if (!lowBatteryState) return;
+    setLowBatteryHsb(rgbToHsb(lowBatteryState.color));
+  }, [lowBatteryState?.color]);
 
   useEffect(() => {
     if (!selectedLedPositions || selectedLedPositions.size === 0 || !ledData || !keymap) return;
@@ -325,7 +335,7 @@ export default function LightingControl({
           const request = { [field]: value } as Partial<SetLowBatteryIndicatorRequest>;
           const resp = await call_rpc(conn.conn, {
             lighting: { setLowBatteryIndicator: request },
-          });
+          } as any);
           if (!resp.lighting?.setLowBatteryIndicator) {
             console.error("Failed to set low battery indicator", resp);
             return false;
@@ -536,7 +546,7 @@ export default function LightingControl({
             }`}
           >
             <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-            <span>{t("lighting.lowBattery.title", "Low Battery")}</span>
+            <span>{t("lighting.lowBattery.title", "低电量提醒")}</span>
           </button>
         )}
         {hasLayerLed && (
@@ -846,7 +856,7 @@ export default function LightingControl({
 
         {isLowBatterySelected && lowBatteryState && (
           <>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={() => setLowBatteryProp({ enabled: true })}
                 disabled={!isUnlocked}
@@ -859,7 +869,7 @@ export default function LightingControl({
                 {t("lighting.on")}
               </button>
               <button
-                onClick={() => setLowBatteryProp({ enabled: false })}
+                onClick={() => setLowBatteryProp({ enabled: false, demoEnabled: false })}
                 disabled={!isUnlocked}
                 className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors whitespace-nowrap ${
                   !lowBatteryState.enabled
@@ -879,16 +889,49 @@ export default function LightingControl({
               </span>
             </div>
 
+            <div className="flex items-center gap-2 flex-wrap rounded border border-base-300 bg-base-100/50 px-3 py-2">
+              <span className="text-sm text-base-content/60">
+                {t("lighting.lowBattery.demo", "提醒演示")}
+              </span>
+              <button
+                onClick={() => setLowBatteryProp({ enabled: true, demoEnabled: true })}
+                disabled={!isUnlocked}
+                className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors whitespace-nowrap ${
+                  lowBatteryState.demoEnabled
+                    ? "bg-primary text-primary-content"
+                    : "text-base-content hover:bg-base-300"
+                }`}
+              >
+                {t("lighting.lowBattery.demoOn", "开启演示")}
+              </button>
+              <button
+                onClick={() => setLowBatteryProp({ demoEnabled: false })}
+                disabled={!isUnlocked}
+                className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors whitespace-nowrap ${
+                  !lowBatteryState.demoEnabled
+                    ? "bg-primary text-primary-content"
+                    : "text-base-content hover:bg-base-300"
+                }`}
+              >
+                {t("lighting.lowBattery.demoOff", "关闭演示")}
+              </button>
+              <span className="text-sm text-base-content/50">
+                {lowBatteryState.demoEnabled
+                  ? t("lighting.lowBattery.demoActive", "演示中：忽略实际电量，按当前设置闪烁")
+                  : t("lighting.lowBattery.demoInactive", "未演示：仅在实际低电量时触发")}
+              </span>
+            </div>
+
             <div className={`flex flex-col gap-3 ${!lowBatteryState.enabled ? "opacity-40 pointer-events-none" : ""}`}>
               <div className="text-sm text-base-content/60">
                 {t(
                   "lighting.lowBattery.pickHint",
-                  "Click a key above to change which key flashes when the battery is low."
+                  "点击上方键盘，修改低电量提醒要闪烁的按键。"
                 )}
               </div>
               <div className="flex items-center gap-3">
                 <Label className="text-sm text-base-content/60 w-28 shrink-0">
-                  {t("lighting.lowBattery.period", "Blink period")}
+                  {t("lighting.lowBattery.period", "闪烁周期")}
                 </Label>
                 <input
                   type="number"
@@ -896,17 +939,56 @@ export default function LightingControl({
                   step={250}
                   value={lowBatteryState.periodMs}
                   onChange={(e) =>
-                    setLowBatteryProp({ periodMs: Number(e.target.value) || 0 })
+                    setLowBatteryProp({ periodMs: Math.max(250, Number(e.target.value) || 250) })
                   }
                   disabled={!isUnlocked}
                   className="w-28 rounded border border-base-300 bg-base-100 px-2 py-1 text-sm"
                 />
                 <span className="text-sm text-base-content/50">ms</span>
               </div>
-              <div className="grid gap-2 rounded border border-base-300 bg-base-100/50 p-3 text-sm">
+              <div className="flex items-center gap-3">
+                <Label className="text-sm text-base-content/60 w-28 shrink-0">
+                  {t("lighting.lowBattery.duration", "亮灯时长")}
+                </Label>
+                <input
+                  type="number"
+                  min={50}
+                  step={50}
+                  value={lowBatteryState.flashDurationMs}
+                  onChange={(e) =>
+                    setLowBatteryProp({
+                      flashDurationMs: Math.max(50, Number(e.target.value) || 50),
+                    })
+                  }
+                  disabled={!isUnlocked}
+                  className="w-28 rounded border border-base-300 bg-base-100 px-2 py-1 text-sm"
+                />
+                <span className="text-sm text-base-content/50">ms</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Label className="text-sm text-base-content/60 w-28 shrink-0">
+                  {t("lighting.lowBattery.threshold", "低电量阈值")}
+                </Label>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  step={1}
+                  value={lowBatteryState.thresholdPct}
+                  onChange={(e) =>
+                    setLowBatteryProp({
+                      thresholdPct: Math.min(100, Math.max(1, Number(e.target.value) || 1)),
+                    })
+                  }
+                  disabled={!isUnlocked}
+                  className="w-28 rounded border border-base-300 bg-base-100 px-2 py-1 text-sm"
+                />
+                <span className="text-sm text-base-content/50">%</span>
+              </div>
+              <div className="grid gap-3 rounded border border-base-300 bg-base-100/50 p-3 text-sm">
                 <div className="flex items-center gap-3">
                   <span className="text-base-content/60 w-28 shrink-0">
-                    {t("lighting.lowBattery.color", "Flash color")}
+                    {t("lighting.lowBattery.color", "提醒颜色")}
                   </span>
                   <span
                     className="h-5 w-10 rounded border border-base-300"
@@ -914,18 +996,14 @@ export default function LightingControl({
                   />
                   <span className="font-mono text-base-content/70">{lowBatteryColorHex}</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-base-content/60 w-28 shrink-0">
-                    {t("lighting.lowBattery.threshold", "Threshold")}
-                  </span>
-                  <span>{lowBatteryState.thresholdPct}%</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-base-content/60 w-28 shrink-0">
-                    {t("lighting.lowBattery.duration", "Flash duration")}
-                  </span>
-                  <span>{lowBatteryState.flashDurationMs} ms</span>
-                </div>
+                <HsbColorPicker
+                  hsb={lowBatteryHsb}
+                  onHsbChanged={(hsb) => {
+                    setLowBatteryHsb(hsb);
+                    setLowBatteryProp({ color: hsbToRgb(hsb) });
+                  }}
+                  disabled={!isUnlocked}
+                />
               </div>
             </div>
           </>

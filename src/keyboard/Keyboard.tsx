@@ -356,7 +356,9 @@ export default function Keyboard({ onReady, onProgress, onLightingChanged }: Key
       setHasConnection(true);
     }
     if (lowBatteryResp.status === "fulfilled" && lowBatteryResp.value.lighting?.getLowBatteryIndicator) {
-      setLowBatteryState(lowBatteryResp.value.lighting.getLowBatteryIndicator);
+      setLowBatteryState(
+        lowBatteryResp.value.lighting.getLowBatteryIndicator as LowBatteryIndicatorState
+      );
       setHasLowBattery(true);
     }
     setLightingLoaded(true);

@@ -180,6 +180,19 @@
       "usbColor": "USB Color",
       "btColor": "Bluetooth Color"
     },
+    "lowBattery": {
+      "title": "Low Battery Alert",
+      "pickHint": "Click a key above to change which key flashes when the battery is low.",
+      "period": "Blink period",
+      "color": "Alert color",
+      "threshold": "Low battery threshold",
+      "duration": "Lit duration",
+      "demo": "Alert demo",
+      "demoOn": "Start demo",
+      "demoOff": "Stop demo",
+      "demoActive": "Demo running: ignore real battery level and flash with the current settings.",
+      "demoInactive": "Demo off: this only triggers when the battery is actually low."
+    },
     "indicator": {
       "keyPosition": "Position",
       "layer": "Layer",
@@ -269,7 +282,21 @@
   "other": {
     "tab": "Other",
     "feature": {
-      "tapHold": "Tap-Hold"
+      "tapHold": "Tap-Hold",
+      "power": "Power"
+    },
+    "power": {
+      "summary": "Battery timers",
+      "idle": "Idle timeout",
+      "sleep": "Deep sleep timeout",
+      "saveFailed": "Failed to save power settings. Please try again.",
+      "saving": "Saving...",
+      "unsupported": "This firmware does not expose adjustable idle or deep sleep settings.",
+      "title": "Power settings",
+      "description": "Adjust the battery-mode idle and deep sleep timers stored on the keyboard.",
+      "idleHint": "After this much inactivity, the keyboard enters idle mode.",
+      "sleepHint": "After this much inactivity, the keyboard enters deep sleep.",
+      "note": "Values are stored in milliseconds. Lower values save more battery, higher values wake less often."
     }
   },
   "hid": {

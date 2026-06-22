@@ -1231,7 +1231,7 @@ export const SetLayerLedEnabledRequest = {
     },
 };
 function createBaseLowBatteryIndicatorState() {
-    return { enabled: false, color: 0, keyPosition: 0, periodMs: 0, thresholdPct: 0, flashDurationMs: 0 };
+    return { enabled: false, color: 0, keyPosition: 0, periodMs: 0, thresholdPct: 0, flashDurationMs: 0, demoEnabled: false };
 }
 export const LowBatteryIndicatorState = {
     encode(message, writer = _m0.Writer.create()) {
@@ -1252,6 +1252,9 @@ export const LowBatteryIndicatorState = {
         }
         if (message.flashDurationMs !== 0) {
             writer.uint32(48).uint32(message.flashDurationMs);
+        }
+        if (message.demoEnabled !== false) {
+            writer.uint32(56).bool(message.demoEnabled);
         }
         return writer;
     },
@@ -1298,6 +1301,12 @@ export const LowBatteryIndicatorState = {
                     }
                     message.flashDurationMs = reader.uint32();
                     continue;
+                case 7:
+                    if (tag !== 56) {
+                        break;
+                    }
+                    message.demoEnabled = reader.bool();
+                    continue;
             }
             if ((tag & 7) === 4 || tag === 0) {
                 break;
@@ -1314,6 +1323,7 @@ export const LowBatteryIndicatorState = {
             periodMs: isSet(object.periodMs) ? globalThis.Number(object.periodMs) : 0,
             thresholdPct: isSet(object.thresholdPct) ? globalThis.Number(object.thresholdPct) : 0,
             flashDurationMs: isSet(object.flashDurationMs) ? globalThis.Number(object.flashDurationMs) : 0,
+            demoEnabled: isSet(object.demoEnabled) ? globalThis.Boolean(object.demoEnabled) : false,
         };
     },
     toJSON(message) {
@@ -1336,6 +1346,9 @@ export const LowBatteryIndicatorState = {
         if (message.flashDurationMs !== 0) {
             obj.flashDurationMs = Math.round(message.flashDurationMs);
         }
+        if (message.demoEnabled !== false) {
+            obj.demoEnabled = message.demoEnabled;
+        }
         return obj;
     },
     create(base) {
@@ -1349,11 +1362,12 @@ export const LowBatteryIndicatorState = {
         message.periodMs = object.periodMs ?? 0;
         message.thresholdPct = object.thresholdPct ?? 0;
         message.flashDurationMs = object.flashDurationMs ?? 0;
+        message.demoEnabled = object.demoEnabled ?? false;
         return message;
     },
 };
 function createBaseSetLowBatteryIndicatorRequest() {
-    return { enabled: undefined, keyPosition: undefined, periodMs: undefined };
+    return { enabled: undefined, keyPosition: undefined, periodMs: undefined, color: undefined, thresholdPct: undefined, flashDurationMs: undefined, demoEnabled: undefined };
 }
 export const SetLowBatteryIndicatorRequest = {
     encode(message, writer = _m0.Writer.create()) {
@@ -1365,6 +1379,18 @@ export const SetLowBatteryIndicatorRequest = {
         }
         if (message.periodMs !== undefined) {
             writer.uint32(24).uint32(message.periodMs);
+        }
+        if (message.color !== undefined) {
+            writer.uint32(32).uint32(message.color);
+        }
+        if (message.thresholdPct !== undefined) {
+            writer.uint32(40).uint32(message.thresholdPct);
+        }
+        if (message.flashDurationMs !== undefined) {
+            writer.uint32(48).uint32(message.flashDurationMs);
+        }
+        if (message.demoEnabled !== undefined) {
+            writer.uint32(56).bool(message.demoEnabled);
         }
         return writer;
     },
@@ -1393,6 +1419,30 @@ export const SetLowBatteryIndicatorRequest = {
                     }
                     message.periodMs = reader.uint32();
                     continue;
+                case 4:
+                    if (tag !== 32) {
+                        break;
+                    }
+                    message.color = reader.uint32();
+                    continue;
+                case 5:
+                    if (tag !== 40) {
+                        break;
+                    }
+                    message.thresholdPct = reader.uint32();
+                    continue;
+                case 6:
+                    if (tag !== 48) {
+                        break;
+                    }
+                    message.flashDurationMs = reader.uint32();
+                    continue;
+                case 7:
+                    if (tag !== 56) {
+                        break;
+                    }
+                    message.demoEnabled = reader.bool();
+                    continue;
             }
             if ((tag & 7) === 4 || tag === 0) {
                 break;
@@ -1406,6 +1456,10 @@ export const SetLowBatteryIndicatorRequest = {
             enabled: isSet(object.enabled) ? globalThis.Boolean(object.enabled) : undefined,
             keyPosition: isSet(object.keyPosition) ? globalThis.Number(object.keyPosition) : undefined,
             periodMs: isSet(object.periodMs) ? globalThis.Number(object.periodMs) : undefined,
+            color: isSet(object.color) ? globalThis.Number(object.color) : undefined,
+            thresholdPct: isSet(object.thresholdPct) ? globalThis.Number(object.thresholdPct) : undefined,
+            flashDurationMs: isSet(object.flashDurationMs) ? globalThis.Number(object.flashDurationMs) : undefined,
+            demoEnabled: isSet(object.demoEnabled) ? globalThis.Boolean(object.demoEnabled) : undefined,
         };
     },
     toJSON(message) {
@@ -1419,6 +1473,18 @@ export const SetLowBatteryIndicatorRequest = {
         if (message.periodMs !== undefined) {
             obj.periodMs = Math.round(message.periodMs);
         }
+        if (message.color !== undefined) {
+            obj.color = Math.round(message.color);
+        }
+        if (message.thresholdPct !== undefined) {
+            obj.thresholdPct = Math.round(message.thresholdPct);
+        }
+        if (message.flashDurationMs !== undefined) {
+            obj.flashDurationMs = Math.round(message.flashDurationMs);
+        }
+        if (message.demoEnabled !== undefined) {
+            obj.demoEnabled = message.demoEnabled;
+        }
         return obj;
     },
     create(base) {
@@ -1429,6 +1495,10 @@ export const SetLowBatteryIndicatorRequest = {
         message.enabled = object.enabled ?? undefined;
         message.keyPosition = object.keyPosition ?? undefined;
         message.periodMs = object.periodMs ?? undefined;
+        message.color = object.color ?? undefined;
+        message.thresholdPct = object.thresholdPct ?? undefined;
+        message.flashDurationMs = object.flashDurationMs ?? undefined;
+        message.demoEnabled = object.demoEnabled ?? undefined;
         return message;
     },
 };
