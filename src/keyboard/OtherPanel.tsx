@@ -212,9 +212,9 @@ export const OtherPanel = ({
         ))}
       </nav>
 
-      <nav className="flex flex-col w-44 flex-shrink-0 px-2 border-r border-base-300 overflow-y-auto py-1 gap-0.5">
-        {topFeature === "tapHold" ? (
-          <>
+      {topFeature === "tapHold" ? (
+        <>
+          <nav className="flex flex-col w-44 flex-shrink-0 px-2 border-r border-base-300 overflow-y-auto py-1 gap-0.5">
             <SubTabButton active={subTab === "modtap"} onClick={() => setSubTab("modtap")}>
               {BUILTIN_MOD_TAP}
             </SubTabButton>
@@ -224,81 +224,65 @@ export const OtherPanel = ({
             <SubTabButton active={subTab === "user"} onClick={() => setSubTab("user")}>
               {t("holdTap.section.userPresets", "User Presets")}
             </SubTabButton>
-          </>
-        ) : (
-          <PowerSummaryNav powerSettings={powerSettings} />
-        )}
-      </nav>
+          </nav>
 
-      {/* Action bar stays pinned at top. */}
-      <div className="flex-1 pl-4 min-w-0 overflow-y-auto py-1 flex flex-col gap-3">
-        {topFeature === "tapHold" && selected && (
-          <ActionBar
-            isBuiltin={isBuiltinHoldTap(selected)}
-            dirty={dirty}
-            saving={saving}
-            saveError={saveError}
-            canReset={canReset}
-            onResetDefault={resetToDefault}
-            onSave={handleSave}
-            onCancel={clearDraft}
-          />
-        )}
+          <div className="flex-1 pl-4 min-w-0 overflow-y-auto py-1 flex flex-col gap-3">
+            {selected && (
+              <ActionBar
+                isBuiltin={isBuiltinHoldTap(selected)}
+                dirty={dirty}
+                saving={saving}
+                saveError={saveError}
+                canReset={canReset}
+                onResetDefault={resetToDefault}
+                onSave={handleSave}
+                onCancel={clearDraft}
+              />
+            )}
 
-        {topFeature === "power" && (
-          <PowerActionBar
-            dirty={powerDirty}
-            saving={powerSaving}
-            saveError={powerSaveError}
-            onSave={handlePowerSave}
-            onCancel={resetPowerDraft}
-          />
-        )}
+            {subTab === "user" && userPresets.length > 0 && (
+              <div className="flex gap-1.5 flex-wrap" role="tablist">
+                {userPresets.map((p) => (
+                  <PresetTab
+                    key={p.id}
+                    active={activePresetId === p.id}
+                    onClick={() => setSelectedPresetId(p.id)}
+                  >
+                    {p.displayName}
+                  </PresetTab>
+                ))}
+              </div>
+            )}
 
-        {topFeature === "tapHold" && subTab === "user" && userPresets.length > 0 && (
-          <div className="flex gap-1.5 flex-wrap" role="tablist">
-            {userPresets.map((p) => (
-              <PresetTab
-                key={p.id}
-                active={activePresetId === p.id}
-                onClick={() => setSelectedPresetId(p.id)}
-              >
-                {p.displayName}
-              </PresetTab>
-            ))}
+            {selected ? (
+              <div key={selected.id} className="animate-fade-in">
+                <BehaviorBody
+                  behavior={selected}
+                  isBuiltin={isBuiltinHoldTap(selected)}
+                  draft={draft}
+                  presets={userPresets}
+                  getConfig={getConfig}
+                  onChange={setDraft}
+                />
+              </div>
+            ) : (
+              <CenteredHint>{emptyHint}</CenteredHint>
+            )}
           </div>
-        )}
-
-        {topFeature === "power" ? (
-          hasPowerSettings && powerDraft ? (
-            <PowerSettingsEditor
-              draft={powerDraft}
-              onChange={setPowerDraft}
-            />
-          ) : (
-            <CenteredHint>
-              {t(
-                "other.power.unsupported",
-                "This firmware does not expose adjustable idle or deep sleep settings."
-              )}
-            </CenteredHint>
-          )
-        ) : selected ? (
-          // Keyed so mode switch replays fade-in animation.
-          <div key={selected.id} className="animate-fade-in">
-            <BehaviorBody
-              behavior={selected}
-              isBuiltin={isBuiltinHoldTap(selected)}
-              draft={draft}
-              presets={userPresets}
-              getConfig={getConfig}
-              onChange={setDraft}
-            />
-          </div>
-        ) : (
-          <CenteredHint>{emptyHint}</CenteredHint>
-        )}
-      </div>
+        </>
+      ) : (
+        <PowerPanel
+          powerSettings={powerSettings}
+          powerDraft={powerDraft}
+          hasPowerSettings={hasPowerSettings}
+          powerDirty={powerDirty}
+          powerSaving={powerSaving}
+          powerSaveError={powerSaveError}
+          onSave={handlePowerSave}
+          onCancel={resetPowerDraft}
+          onChange={setPowerDraft}
+        />
+      )}
     </div>
   );
 };
@@ -587,6 +571,63 @@ const PowerSummaryNav = ({
   );
 };
 
+const PowerPanel = ({
+  powerSettings,
+  powerDraft,
+  hasPowerSettings,
+  powerDirty,
+  powerSaving,
+  powerSaveError,
+  onSave,
+  onCancel,
+  onChange,
+}: {
+  powerSettings: PowerSettingsState | null;
+  powerDraft: PowerSettingsState | null;
+  hasPowerSettings: boolean;
+  powerDirty: boolean;
+  powerSaving: boolean;
+  powerSaveError: string | null;
+  onSave: () => void;
+  onCancel: () => void;
+  onChange: React.Dispatch<React.SetStateAction<PowerSettingsState | null>>;
+}) => {
+  const { t } = useTranslation();
+
+  return (
+    <div className="flex-1 min-w-0 overflow-y-auto pl-4 py-1">
+      <div className="flex flex-col gap-4 animate-fade-in">
+        {hasPowerSettings && powerDraft ? (
+          <>
+            <PowerActionBar
+              dirty={powerDirty}
+              saving={powerSaving}
+              saveError={powerSaveError}
+              onSave={onSave}
+              onCancel={onCancel}
+            />
+            <div className="grid gap-4 lg:grid-cols-[15rem_minmax(0,1fr)]">
+              <div className="min-w-0">
+                <PowerSummaryNav powerSettings={powerSettings} />
+              </div>
+              <div className="min-w-0">
+                <PowerSettingsEditor draft={powerDraft} onChange={onChange} />
+              </div>
+            </div>
+          </>
+        ) : (
+          <CenteredHint>
+            {t(
+              "other.power.unsupported",
+              "This firmware does not expose adjustable idle or deep sleep settings."
+            )}
+          </CenteredHint>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const PowerActionBar = ({
   dirty,
   saving,
@@ -633,13 +674,18 @@ const PowerSettingsEditor = ({
 }) => {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-col gap-4 max-w-xl animate-fade-in">
-      <p className="text-sm text-base-content/60">
-        {t(
-          "other.power.description",
-          "Adjust the battery-mode idle and deep sleep timers stored on the keyboard."
-        )}
-      </p>
+    <div className="flex flex-col gap-4 min-w-0">
+      <div className="rounded-xl border border-base-300 bg-base-100/70 p-4">
+        <div className="text-base font-medium text-base-content">
+          {t("other.power.title", "Power settings")}
+        </div>
+        <p className="mt-1 text-sm text-base-content/60">
+          {t(
+            "other.power.description",
+            "Adjust the battery-mode idle and deep sleep timers stored on the keyboard."
+          )}
+        </p>
+      </div>
 
       <PowerInput
         label={t("other.power.idle", "Idle timeout")}
@@ -648,6 +694,7 @@ const PowerSettingsEditor = ({
           "After this much inactivity, the keyboard enters idle mode."
         )}
         value={draft.idleTimeoutMs}
+        presets={[30000, 60000, 120000, 300000]}
         onChange={(idleTimeoutMs) =>
           onChange((prev) => (prev ? { ...prev, idleTimeoutMs } : prev))
         }
@@ -660,6 +707,7 @@ const PowerSettingsEditor = ({
           "After this much inactivity, the keyboard enters deep sleep."
         )}
         value={draft.sleepTimeoutMs}
+        presets={[300000, 900000, 1800000, 3600000]}
         onChange={(sleepTimeoutMs) =>
           onChange((prev) => (prev ? { ...prev, sleepTimeoutMs } : prev))
         }
@@ -679,14 +727,16 @@ const PowerInput = ({
   label,
   hint,
   value,
+  presets,
   onChange,
 }: {
   label: string;
   hint: string;
   value: number;
+  presets: number[];
   onChange: (value: number) => void;
 }) => (
-  <label className="flex flex-col gap-2 rounded border border-base-300 bg-base-100/60 p-4">
+  <label className="flex flex-col gap-3 rounded-xl border border-base-300 bg-base-100/70 p-4">
     <div className="flex items-start justify-between gap-3">
       <div>
         <div className="text-sm font-medium text-base-content">{label}</div>
@@ -706,6 +756,22 @@ const PowerInput = ({
         className="w-36 rounded border border-base-300 bg-base-100 px-3 py-2 text-sm"
       />
       <span className="text-sm text-base-content/50">ms</span>
+    </div>
+    <div className="flex flex-wrap gap-2">
+      {presets.map((preset) => (
+        <button
+          key={preset}
+          type="button"
+          onClick={() => onChange(preset)}
+          className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+            value === preset
+              ? "border-primary bg-primary text-primary-content"
+              : "border-base-300 bg-base-100 text-base-content/70 hover:bg-base-200"
+          }`}
+        >
+          {formatDuration(preset)}
+        </button>
+      ))}
     </div>
   </label>
 );
