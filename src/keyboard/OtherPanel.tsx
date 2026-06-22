@@ -215,7 +215,18 @@ export const OtherPanel = ({
         }
       }
 
-      setPowerSettings(powerDraft);
+      const refreshed = unwrap_rpc_response(
+        await call_rpc(conn, { core: { getPowerSettings: true } })
+      );
+
+      if (!refreshed.core?.getPowerSettings) {
+        setPowerSaveError(
+          t("other.power.saveFailed", "Failed to save power settings. Please try again.")
+        );
+        return;
+      }
+
+      setPowerSettings(refreshed.core.getPowerSettings);
     } catch (e) {
       console.error("Failed to save power settings", e);
       setPowerSaveError(format_rpc_error(e));
@@ -581,25 +592,30 @@ const PresetOverlaySection = ({
 };
 
 const PowerSummaryNav = ({
-  powerSettings,
+  powerState,
 }: {
-  powerSettings: PowerSettingsState | null;
+  powerState: PowerSettingsState | null;
 }) => {
   const { t } = useTranslation();
   return (
-    <>
-      <div className="px-3 py-1.5 text-xs uppercase tracking-wide text-base-content/40">
-        {t("other.power.summary", "Battery timers")}
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+      <div className="rounded-2xl border border-base-300 bg-base-100/80 p-5">
+        <div className="text-sm font-medium text-base-content/60">
+          {t("other.power.idle", "Idle timeout")}
+        </div>
+        <div className="mt-2 text-2xl font-semibold text-base-content">
+          {formatDuration(powerState?.idleTimeoutMs)}
+        </div>
       </div>
-      <div className="px-3 py-2 rounded text-sm bg-base-100 text-base-content/70">
-        <div className="font-medium">{t("other.power.idle", "Idle timeout")}</div>
-        <div className="text-xs opacity-70">{formatDuration(powerSettings?.idleTimeoutMs)}</div>
+      <div className="rounded-2xl border border-base-300 bg-base-100/80 p-5">
+        <div className="text-sm font-medium text-base-content/60">
+          {t("other.power.sleep", "Deep sleep timeout")}
+        </div>
+        <div className="mt-2 text-2xl font-semibold text-base-content">
+          {formatDuration(powerState?.sleepTimeoutMs)}
+        </div>
       </div>
-      <div className="px-3 py-2 rounded text-sm bg-base-100 text-base-content/70">
-        <div className="font-medium">{t("other.power.sleep", "Deep sleep timeout")}</div>
-        <div className="text-xs opacity-70">{formatDuration(powerSettings?.sleepTimeoutMs)}</div>
-      </div>
-    </>
+    </div>
   );
 };
 
@@ -642,9 +658,9 @@ const PowerPanel = ({
               onSave={onSave}
               onCancel={onCancel}
             />
-            <div className="grid gap-4 lg:grid-cols-[15rem_minmax(0,1fr)]">
+            <div className="grid gap-4 xl:grid-cols-[18rem_minmax(0,1fr)]">
               <div className="min-w-0">
-                <PowerSummaryNav powerSettings={powerSettings} />
+                <PowerSummaryNav powerState={resolvedPowerDraft} />
               </div>
               <div className="min-w-0">
                 <PowerSettingsEditor draft={resolvedPowerDraft} onChange={onChange} />
@@ -686,26 +702,38 @@ const PowerActionBar = ({
   onSave: () => void;
   onCancel: () => void;
 }) => {
-  const { t } = useTranslation();
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-end gap-2 min-h-[1.75rem]">
+    <div className="sticky top-0 z-10 rounded-2xl border border-base-300 bg-base-100/95 p-5 shadow-sm backdrop-blur">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <div className="text-lg font-semibold text-base-content">
+            修改后点击保存
+          </div>
+          <div className="mt-1 text-sm leading-6 text-base-content/60">
+            现在按分钟显示。保存后立即写入键盘。
+          </div>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+          <span className="text-sm font-medium text-base-content/60">
+            {dirty ? "有未保存修改" : "当前已同步"}
+          </span>
         <button
           onClick={onCancel}
           disabled={!dirty || saving}
-          className="px-3 py-1.5 rounded text-sm text-base-content hover:bg-base-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          className="rounded-lg border border-base-300 bg-base-100 px-4 py-2.5 text-sm font-medium text-base-content transition-colors hover:bg-base-200 disabled:cursor-not-allowed disabled:bg-base-200 disabled:text-base-content/40"
         >
-          {t("holdTap.cancel", "Cancel")}
+          恢复
         </button>
         <button
           onClick={onSave}
           disabled={!dirty || saving}
-          className="px-3 py-1.5 rounded text-sm font-medium bg-primary text-primary-content hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-content transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {saving ? t("other.power.saving", "Saving...") : t("holdTap.save", "Save")}
+          {saving ? "保存中..." : "保存"}
         </button>
+        </div>
       </div>
-      {saveError ? <div className="text-sm text-red-500">{saveError}</div> : null}
+      {saveError ? <div className="mt-3 text-sm text-red-500">{saveError}</div> : null}
     </div>
   );
 };
@@ -719,12 +747,12 @@ const PowerSettingsEditor = ({
 }) => {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-col gap-4 min-w-0">
-      <div className="rounded-xl border border-base-300 bg-base-100/70 p-4">
-        <div className="text-base font-medium text-base-content">
+    <div className="flex min-w-0 flex-col gap-4">
+      <div className="rounded-2xl border border-base-300 bg-base-100/70 p-5">
+        <div className="text-2xl font-semibold text-base-content">
           {t("other.power.title", "Power settings")}
         </div>
-        <p className="mt-1 text-sm text-base-content/60">
+        <p className="mt-2 text-base leading-7 text-base-content/60">
           {t(
             "other.power.description",
             "Adjust the battery-mode idle and deep sleep timers stored on the keyboard."
@@ -739,7 +767,8 @@ const PowerSettingsEditor = ({
           "After this much inactivity, the keyboard enters idle mode."
         )}
         value={draft.idleTimeoutMs}
-        presets={[30000, 60000, 120000, 300000]}
+        presets={[0.5, 1, 2, 5]}
+        step={0.5}
         onChange={(idleTimeoutMs) =>
           onChange((prev) => (prev ? { ...prev, idleTimeoutMs } : prev))
         }
@@ -752,17 +781,15 @@ const PowerSettingsEditor = ({
           "After this much inactivity, the keyboard enters deep sleep."
         )}
         value={draft.sleepTimeoutMs}
-        presets={[300000, 900000, 1800000, 3600000]}
+        presets={[5, 15, 30, 60]}
+        step={1}
         onChange={(sleepTimeoutMs) =>
           onChange((prev) => (prev ? { ...prev, sleepTimeoutMs } : prev))
         }
       />
 
-      <div className="rounded border border-base-300 bg-base-100/60 p-3 text-sm text-base-content/60">
-        {t(
-          "other.power.note",
-          "Values are stored in milliseconds. Lower values save more battery, higher values wake less often."
-        )}
+      <div className="rounded-xl border border-base-300 bg-base-100/60 p-4 text-sm leading-6 text-base-content/65">
+        单位已改成分钟。数值越小越省电，数值越大越不容易休眠。
       </div>
     </div>
   );
@@ -773,65 +800,79 @@ const PowerInput = ({
   hint,
   value,
   presets,
+  step,
   onChange,
 }: {
   label: string;
   hint: string;
   value: number;
   presets: number[];
+  step: number;
   onChange: (value: number) => void;
-}) => (
-  <label className="flex flex-col gap-3 rounded-xl border border-base-300 bg-base-100/70 p-4">
-    <div className="flex items-start justify-between gap-3">
-      <div>
-        <div className="text-sm font-medium text-base-content">{label}</div>
-        <div className="text-sm text-base-content/60">{hint}</div>
+}) => {
+  const minutesValue = msToMinutes(value);
+  return (
+  <label className="flex flex-col gap-4 rounded-2xl border border-base-300 bg-base-100/70 p-5">
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+      <div className="min-w-0">
+        <div className="text-xl font-semibold text-base-content sm:text-2xl">{label}</div>
+        <div className="mt-2 text-sm leading-6 text-base-content/60 sm:text-base">{hint}</div>
       </div>
-      <div className="text-xs text-base-content/50 whitespace-nowrap">
+      <div className="shrink-0 rounded-full bg-base-200 px-3 py-1 text-sm font-medium text-base-content/70 whitespace-nowrap">
         {formatDuration(value)}
       </div>
     </div>
-    <div className="flex items-center gap-3">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
       <input
         type="number"
         min={0}
-        step={1000}
-        value={value}
-        onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))}
-        className="w-36 rounded border border-base-300 bg-base-100 px-3 py-2 text-sm"
+        step={step}
+        inputMode="decimal"
+        value={minutesValue}
+        onChange={(e) => onChange(minutesToMs(Math.max(0, Number(e.target.value) || 0)))}
+        className="w-full max-w-[12rem] rounded-xl border border-base-300 bg-base-100 px-4 py-3 text-lg font-semibold text-base-content"
       />
-      <span className="text-sm text-base-content/50">ms</span>
+      <span className="text-base text-base-content/60">分钟</span>
     </div>
     <div className="flex flex-wrap gap-2">
       {presets.map((preset) => (
         <button
           key={preset}
           type="button"
-          onClick={() => onChange(preset)}
-          className={`rounded-full border px-3 py-1 text-xs transition-colors ${
-            value === preset
+          onClick={() => onChange(minutesToMs(preset))}
+          className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition-colors ${
+            Math.abs(minutesValue - preset) < 0.001
               ? "border-primary bg-primary text-primary-content"
               : "border-base-300 bg-base-100 text-base-content/70 hover:bg-base-200"
           }`}
         >
-          {formatDuration(preset)}
+          {formatMinuteLabel(preset)}
         </button>
       ))}
     </div>
   </label>
-);
+  );
+};
+
+function msToMinutes(ms: number) {
+  return Number((ms / 60000).toFixed(ms % 60000 === 0 ? 0 : 1));
+}
+
+function minutesToMs(minutes: number) {
+  return Math.max(0, Math.round(minutes * 60000));
+}
+
+function formatMinuteLabel(minutes: number) {
+  return `${stripTrailingZero(minutes)} 分钟`;
+}
 
 function formatDuration(ms?: number | null) {
   if (ms == null) {
     return "--";
   }
-  if (ms < 1000) {
-    return `${ms} ms`;
-  }
-  const seconds = ms / 1000;
-  if (seconds < 60) {
-    return `${seconds.toFixed(seconds % 1 === 0 ? 0 : 1)} s`;
-  }
-  const minutes = seconds / 60;
-  return `${minutes.toFixed(minutes % 1 === 0 ? 0 : 1)} min`;
+  return `${stripTrailingZero(ms / 60000)} 分钟`;
+}
+
+function stripTrailingZero(value: number) {
+  return Number.isInteger(value) ? `${value}` : value.toFixed(1).replace(/\.0$/, "");
 }
