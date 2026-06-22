@@ -846,7 +846,11 @@ const PowerInput = ({
 }) => {
   const minutesValue = msToMinutes(value);
   return (
-  <label className="flex flex-col gap-4 rounded-2xl border border-base-300 bg-base-100/70 p-5">
+  <div
+    className="flex flex-col gap-4 rounded-2xl border border-base-300 bg-base-100/70 p-5"
+    role="group"
+    aria-label={label}
+  >
     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
       <div className="min-w-0">
         <div className="text-xl font-semibold text-base-content sm:text-2xl">{label}</div>
@@ -864,6 +868,7 @@ const PowerInput = ({
         inputMode="decimal"
         value={minutesValue}
         onChange={(e) => onChange(minutesToMs(Math.max(0, Number(e.target.value) || 0)))}
+        aria-label={label}
         className="w-full max-w-[12rem] rounded-xl border border-base-300 bg-base-100 px-4 py-3 text-lg font-semibold text-base-content"
       />
       <span className="text-base text-base-content/60">分钟</span>
@@ -884,7 +889,7 @@ const PowerInput = ({
         </button>
       ))}
     </div>
-  </label>
+  </div>
   );
 };
 
