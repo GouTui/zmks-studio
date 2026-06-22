@@ -10,7 +10,7 @@ import React, {
 } from "react";
 
 import { Request } from "@zmkfirmware/zmk-studio-ts-client";
-import { call_rpc } from "../rpc/logging";
+import { call_rpc, format_rpc_error, unwrap_rpc_response } from "../rpc/logging";
 import {
   PhysicalLayout,
   Keymap,
@@ -371,7 +371,9 @@ export default function Keyboard({ onReady, onProgress, onLightingChanged }: Key
 
     try {
       setPowerLoadError(null);
-      const response = await call_rpc(conn.conn, { core: { getPowerSettings: true } });
+      const response = unwrap_rpc_response(
+        await call_rpc(conn.conn, { core: { getPowerSettings: true } })
+      );
       if (ignore?.current) {
         return;
       }
@@ -388,7 +390,7 @@ export default function Keyboard({ onReady, onProgress, onLightingChanged }: Key
       if (!ignore?.current) {
         setPowerSettings(null);
         setHasPowerSettings(false);
-        setPowerLoadError(e instanceof Error && e.message ? e.message : "RPC error");
+        setPowerLoadError(format_rpc_error(e));
       }
     } finally {
       if (!ignore?.current) {

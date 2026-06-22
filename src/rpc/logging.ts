@@ -1,5 +1,7 @@
 import {
   call_rpc as inner_call_rpc,
+  MetaError,
+  NoResponseError,
   Request,
   RequestResponse,
   RpcConnection,
@@ -19,4 +21,36 @@ export async function call_rpc(
       console.error("RPC Error", e);
       return e;
     });
+}
+
+export function unwrap_rpc_response(value: unknown): RequestResponse {
+  if (value instanceof Error) {
+    throw value;
+  }
+
+  if (!value || typeof value !== "object" || !("requestId" in value)) {
+    throw new Error(typeof value === "string" ? value : "Invalid RPC response");
+  }
+
+  return value as RequestResponse;
+}
+
+export function format_rpc_error(error: unknown): string {
+  if (error instanceof MetaError) {
+    return `RPC ${error.condition}`;
+  }
+
+  if (error instanceof NoResponseError) {
+    return "No RPC response received";
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  return "RPC error";
 }

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Power, Wrench } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { ConnectionContext } from "../rpc/ConnectionContext";
-import { call_rpc } from "../rpc/logging";
+import { call_rpc, format_rpc_error, unwrap_rpc_response } from "../rpc/logging";
 import { useHoldTapConfigs } from "../behaviors/useHoldTapConfigs";
 import { HoldTapConfig } from "@zmkfirmware/zmk-studio-ts-client/behaviors";
 import type { GetBehaviorDetailsResponse } from "@zmkfirmware/zmk-studio-ts-client/behaviors";
@@ -31,6 +31,18 @@ interface OtherPanelProps {
 
 type TopFeature = "tapHold" | "power";
 type SubTab = "modtap" | "layertap" | "user";
+
+function explainPowerLoadError(message: string) {
+  if (message.includes("RPC RPC_NOT_FOUND")) {
+    return "RPC_NOT_FOUND: firmware did not expose getPowerSettings. Usually this means the board is still running an older firmware image.";
+  }
+
+  if (message.includes("No RPC response received") || message.includes("No response")) {
+    return "NO_RESPONSE: the keyboard did not answer getPowerSettings. Usually this means a firmware/web protocol mismatch or the board did not reboot into the new firmware.";
+  }
+
+  return `Power settings load failed: ${message}`;
+}
 
 interface TopFeatureSpec {
   id: TopFeature;
@@ -180,14 +192,16 @@ export const OtherPanel = ({
       }
 
       for (const request of requests) {
-        const response = await call_rpc(conn, {
-          core: {
-            setPowerSettings:
-              request.field === "idleTimeoutMs"
-                ? { idleTimeoutMs: request.value }
-                : { sleepTimeoutMs: request.value },
-          },
-        });
+        const response = unwrap_rpc_response(
+          await call_rpc(conn, {
+            core: {
+              setPowerSettings:
+                request.field === "idleTimeoutMs"
+                  ? { idleTimeoutMs: request.value }
+                  : { sleepTimeoutMs: request.value },
+            },
+          })
+        );
 
         if (!response.core?.setPowerSettings) {
           setPowerSaveError(
@@ -200,9 +214,7 @@ export const OtherPanel = ({
       setPowerSettings(powerDraft);
     } catch (e) {
       console.error("Failed to save power settings", e);
-      setPowerSaveError(
-        t("other.power.saveFailed", "Failed to save power settings. Please try again.")
-      );
+      setPowerSaveError(format_rpc_error(e));
     } finally {
       setPowerSaving(false);
     }
@@ -430,7 +442,7 @@ const ActionBar = ({
             disabled={!dirty || saving}
             className="px-3 py-1.5 rounded text-sm font-medium bg-primary text-primary-content hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {saving ? t("holdTap.saving", "Saving…") : t("holdTap.save", "Save")}
+            {saving ? t("holdTap.saving", "Saving...") : t("holdTap.save", "Save")}
           </button>
         </div>
       </div>
@@ -458,7 +470,7 @@ const BehaviorBody = ({
   const { t } = useTranslation();
 
   if (!draft) {
-    return <CenteredHint>{t("holdTap.loading", "Loading…")}</CenteredHint>;
+    return <CenteredHint>{t("holdTap.loading", "Loading...")}</CenteredHint>;
   }
 
   return isBuiltin ? (
@@ -636,10 +648,7 @@ const PowerPanel = ({
         ) : (
           <CenteredHint>
             {powerLoadError
-              ? t(
-                  "other.power.loadFailed",
-                  `读取电源设置失败：${powerLoadError}`
-                )
+              ? explainPowerLoadError(powerLoadError)
               : t(
                   "other.power.unsupported",
                   "This firmware does not expose adjustable idle or deep sleep settings."
