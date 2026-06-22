@@ -90,6 +90,7 @@ export const OtherPanel = ({
   const [powerDraft, setPowerDraft] = useState<PowerSettingsState | null>(powerSettings);
   const [powerSaving, setPowerSaving] = useState(false);
   const [powerSaveError, setPowerSaveError] = useState<string | null>(null);
+  const [powerSaveNotice, setPowerSaveNotice] = useState<string | null>(null);
 
   // Fetch all upfront so preset apply doesn't stall.
   const allHoldTapIds = useMemo(() => holdTapBehaviors.map((b) => b.id), [holdTapBehaviors]);
@@ -118,6 +119,7 @@ export const OtherPanel = ({
     setSaveError(null);
     setPowerDraft(null);
     setPowerSaveError(null);
+    setPowerSaveNotice(null);
   }, [conn]);
 
   if (!conn) {
@@ -182,6 +184,7 @@ export const OtherPanel = ({
     }
 
     setPowerSaveError(null);
+    setPowerSaveNotice(null);
     setPowerSaving(true);
     try {
       const requests: Array<
@@ -226,7 +229,23 @@ export const OtherPanel = ({
         return;
       }
 
+      for (const request of requests) {
+        if (refreshed.core.getPowerSettings[request.field] !== request.value) {
+          setPowerSaveError(
+            "键盘已响应保存请求，但读回的休眠时间与刚保存的数值不一致。更像是固件侧没有实际写入。"
+          );
+          return;
+        }
+      }
+
       setPowerSettings(refreshed.core.getPowerSettings);
+      setPowerSaveNotice(
+        `已通过 USB 写入键盘：空闲 ${formatDuration(
+          refreshed.core.getPowerSettings.idleTimeoutMs
+        )}，深度休眠 ${formatDuration(
+          refreshed.core.getPowerSettings.sleepTimeoutMs
+        )}。这些时间会在电池或蓝牙模式下生效。`
+      );
     } catch (e) {
       console.error("Failed to save power settings", e);
       setPowerSaveError(format_rpc_error(e));
@@ -238,6 +257,7 @@ export const OtherPanel = ({
   const resetPowerDraft = () => {
     setPowerDraft(powerSettings);
     setPowerSaveError(null);
+    setPowerSaveNotice(null);
   };
 
   return (
@@ -321,9 +341,13 @@ export const OtherPanel = ({
           powerDirty={powerDirty}
           powerSaving={powerSaving}
           powerSaveError={powerSaveError}
+          powerSaveNotice={powerSaveNotice}
           onSave={handlePowerSave}
           onCancel={resetPowerDraft}
-          onChange={setPowerDraft}
+          onChange={(next) => {
+            setPowerSaveNotice(null);
+            setPowerDraft(next);
+          }}
         />
       )}
     </div>
@@ -627,6 +651,7 @@ const PowerPanel = ({
   powerDirty,
   powerSaving,
   powerSaveError,
+  powerSaveNotice,
   onSave,
   onCancel,
   onChange,
@@ -638,6 +663,7 @@ const PowerPanel = ({
   powerDirty: boolean;
   powerSaving: boolean;
   powerSaveError: string | null;
+  powerSaveNotice: string | null;
   onSave: () => void;
   onCancel: () => void;
   onChange: React.Dispatch<React.SetStateAction<PowerSettingsState | null>>;
@@ -655,6 +681,7 @@ const PowerPanel = ({
               dirty={powerDirty}
               saving={powerSaving}
               saveError={powerSaveError}
+              saveNotice={powerSaveNotice}
               onSave={onSave}
               onCancel={onCancel}
             />
@@ -693,12 +720,14 @@ const PowerActionBar = ({
   dirty,
   saving,
   saveError,
+  saveNotice,
   onSave,
   onCancel,
 }: {
   dirty: boolean;
   saving: boolean;
   saveError: string | null;
+  saveNotice: string | null;
   onSave: () => void;
   onCancel: () => void;
 }) => {
@@ -734,6 +763,11 @@ const PowerActionBar = ({
         </div>
       </div>
       {saveError ? <div className="mt-3 text-sm text-red-500">{saveError}</div> : null}
+      {!saveError && saveNotice ? (
+        <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-700">
+          {saveNotice}
+        </div>
+      ) : null}
     </div>
   );
 };
