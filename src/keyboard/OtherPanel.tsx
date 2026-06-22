@@ -26,6 +26,7 @@ interface OtherPanelProps {
   powerSettings: PowerSettingsState | null;
   setPowerSettings: React.Dispatch<React.SetStateAction<PowerSettingsState | null>>;
   hasPowerSettings: boolean;
+  powerLoadError: string | null;
 }
 
 type TopFeature = "tapHold" | "power";
@@ -48,6 +49,7 @@ export const OtherPanel = ({
   powerSettings,
   setPowerSettings,
   hasPowerSettings,
+  powerLoadError,
 }: OtherPanelProps) => {
   const { t } = useTranslation();
   const { conn } = useContext(ConnectionContext);
@@ -159,27 +161,40 @@ export const OtherPanel = ({
       powerDraft.sleepTimeoutMs !== powerSettings.sleepTimeoutMs);
 
   const handlePowerSave = async () => {
-    if (!conn || !powerDraft) {
+    if (!conn || !powerDraft || !powerSettings) {
       return;
     }
 
     setPowerSaveError(null);
     setPowerSaving(true);
     try {
-      const response = await call_rpc(conn, {
-        core: {
-          setPowerSettings: {
-            idleTimeoutMs: powerDraft.idleTimeoutMs,
-            sleepTimeoutMs: powerDraft.sleepTimeoutMs,
-          },
-        },
-      });
+      const requests: Array<
+        | { field: "idleTimeoutMs"; value: number }
+        | { field: "sleepTimeoutMs"; value: number }
+      > = [];
+      if (powerDraft.idleTimeoutMs !== powerSettings.idleTimeoutMs) {
+        requests.push({ field: "idleTimeoutMs", value: powerDraft.idleTimeoutMs });
+      }
+      if (powerDraft.sleepTimeoutMs !== powerSettings.sleepTimeoutMs) {
+        requests.push({ field: "sleepTimeoutMs", value: powerDraft.sleepTimeoutMs });
+      }
 
-      if (!response.core?.setPowerSettings) {
-        setPowerSaveError(
-          t("other.power.saveFailed", "Failed to save power settings. Please try again.")
-        );
-        return;
+      for (const request of requests) {
+        const response = await call_rpc(conn, {
+          core: {
+            setPowerSettings:
+              request.field === "idleTimeoutMs"
+                ? { idleTimeoutMs: request.value }
+                : { sleepTimeoutMs: request.value },
+          },
+        });
+
+        if (!response.core?.setPowerSettings) {
+          setPowerSaveError(
+            t("other.power.saveFailed", "Failed to save power settings. Please try again.")
+          );
+          return;
+        }
       }
 
       setPowerSettings(powerDraft);
@@ -275,6 +290,7 @@ export const OtherPanel = ({
           powerSettings={powerSettings}
           powerDraft={powerDraft}
           hasPowerSettings={hasPowerSettings}
+          powerLoadError={powerLoadError}
           powerDirty={powerDirty}
           powerSaving={powerSaving}
           powerSaveError={powerSaveError}
@@ -575,6 +591,7 @@ const PowerPanel = ({
   powerSettings,
   powerDraft,
   hasPowerSettings,
+  powerLoadError,
   powerDirty,
   powerSaving,
   powerSaveError,
@@ -585,6 +602,7 @@ const PowerPanel = ({
   powerSettings: PowerSettingsState | null;
   powerDraft: PowerSettingsState | null;
   hasPowerSettings: boolean;
+  powerLoadError: string | null;
   powerDirty: boolean;
   powerSaving: boolean;
   powerSaveError: string | null;
@@ -617,10 +635,15 @@ const PowerPanel = ({
           </>
         ) : (
           <CenteredHint>
-            {t(
-              "other.power.unsupported",
-              "This firmware does not expose adjustable idle or deep sleep settings."
-            )}
+            {powerLoadError
+              ? t(
+                  "other.power.loadFailed",
+                  `读取电源设置失败：${powerLoadError}`
+                )
+              : t(
+                  "other.power.unsupported",
+                  "This firmware does not expose adjustable idle or deep sleep settings."
+                )}
           </CenteredHint>
         )}
       </div>

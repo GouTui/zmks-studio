@@ -239,6 +239,7 @@ export default function Keyboard({ onReady, onProgress, onLightingChanged }: Key
   const [hasConnection, setHasConnection] = useState(false);
   const [hasLowBattery, setHasLowBattery] = useState(false);
   const [hasPowerSettings, setHasPowerSettings] = useState(false);
+  const [powerLoadError, setPowerLoadError] = useState<string | null>(null);
   const [lightingLoaded, setLightingLoaded] = useState(false);
   const [powerLoaded, setPowerLoaded] = useState(false);
   const [indicatorPositionDraft, setIndicatorPositionDraft] = useState<IndicatorPositionDraft | undefined>(undefined);
@@ -317,6 +318,7 @@ export default function Keyboard({ onReady, onProgress, onLightingChanged }: Key
     setHasConnection(false);
     setHasLowBattery(false);
     setHasPowerSettings(false);
+    setPowerLoadError(null);
     setLightingLoaded(false);
     setPowerLoaded(false);
   }, [conn]);
@@ -368,17 +370,26 @@ export default function Keyboard({ onReady, onProgress, onLightingChanged }: Key
     if (!conn.conn) return;
 
     try {
+      setPowerLoadError(null);
       const response = await call_rpc(conn.conn, { core: { getPowerSettings: true } });
       if (ignore?.current) {
         return;
       }
 
-      if (response.core?.getPowerSettings) {
+      if (response.core?.getPowerSettings !== undefined) {
         setPowerSettings(response.core.getPowerSettings);
         setHasPowerSettings(true);
+      } else {
+        setPowerSettings(null);
+        setHasPowerSettings(false);
       }
     } catch (e) {
       console.error("Failed to load power settings", e);
+      if (!ignore?.current) {
+        setPowerSettings(null);
+        setHasPowerSettings(false);
+        setPowerLoadError(e instanceof Error && e.message ? e.message : "RPC error");
+      }
     } finally {
       if (!ignore?.current) {
         setPowerLoaded(true);
@@ -923,6 +934,7 @@ export default function Keyboard({ onReady, onProgress, onLightingChanged }: Key
                 powerSettings={powerSettings}
                 setPowerSettings={setPowerSettings}
                 hasPowerSettings={hasPowerSettings}
+                powerLoadError={powerLoadError}
               />
             ) : (
               <LightingControl
@@ -952,7 +964,6 @@ export default function Keyboard({ onReady, onProgress, onLightingChanged }: Key
                 indicatorPositionDraft={indicatorPositionDraft}
                 onSourceChange={handleLightingSourceChanged}
                 onClearIndicator={() => setIndicatorPositionDraft(undefined)}
-                onLightingChanged={onLightingChanged}
               />
             )}
         </BottomPanel>

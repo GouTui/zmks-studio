@@ -66,7 +66,6 @@ export interface LightingControlProps {
   indicatorPositionDraft?: IndicatorPositionDraft;
   onSourceChange?: (source: LightSource) => void;
   onClearIndicator?: () => void;
-  onLightingChanged?: () => void;
 }
 
 const capsLockIndicatorFieldOrder: (keyof SetCapsLockIndicatorRequest)[] = [
@@ -122,7 +121,6 @@ export default function LightingControl({
   indicatorPositionDraft,
   onSourceChange,
   onClearIndicator,
-  onLightingChanged,
 }: LightingControlProps) {
   const { t } = useTranslation();
   const conn = useContext(ConnectionContext);
@@ -230,13 +228,12 @@ export default function LightingControl({
         });
         if (resp.lighting?.setRgbUnderglowState) {
           setRgbState((prev) => (prev ? { ...prev, ...props } : prev));
-          onLightingChanged?.();
         }
       } catch (e) {
         console.error("Failed to set RGB state", e);
       }
     },
-    [conn, setRgbState, onLightingChanged]
+    [conn, setRgbState]
   );
 
   const setBlProp = useCallback(
@@ -248,13 +245,12 @@ export default function LightingControl({
         });
         if (resp.lighting?.setBacklightState) {
           setBacklightState((prev) => (prev ? { ...prev, ...props } : prev));
-          onLightingChanged?.();
         }
       } catch (e) {
         console.error("Failed to set backlight state", e);
       }
     },
-    [conn, setBacklightState, onLightingChanged]
+    [conn, setBacklightState]
   );
 
   const setCapsLockProp = useCallback(
@@ -279,7 +275,6 @@ export default function LightingControl({
 
         if (Object.keys(applied).length > 0) {
           setCapsLockState((prev) => (prev ? { ...prev, ...applied } : prev));
-          onLightingChanged?.();
         }
         return true;
       } catch (e) {
@@ -287,7 +282,7 @@ export default function LightingControl({
         return false;
       }
     },
-    [conn, setCapsLockState, onLightingChanged]
+    [conn, setCapsLockState]
   );
 
   const setConnectionProp = useCallback(
@@ -312,7 +307,6 @@ export default function LightingControl({
 
         if (Object.keys(applied).length > 0) {
           setConnectionState?.((prev) => (prev ? { ...prev, ...applied } : prev));
-          onLightingChanged?.();
         }
         return true;
       } catch (e) {
@@ -320,7 +314,7 @@ export default function LightingControl({
         return false;
       }
     },
-    [conn, setConnectionState, onLightingChanged]
+    [conn, setConnectionState]
   );
 
   const setLowBatteryProp = useCallback(
@@ -345,7 +339,6 @@ export default function LightingControl({
 
         if (Object.keys(applied).length > 0) {
           setLowBatteryState?.((prev) => (prev ? { ...prev, ...applied } : prev));
-          onLightingChanged?.();
         }
         return true;
       } catch (e) {
@@ -353,7 +346,7 @@ export default function LightingControl({
         return false;
       }
     },
-    [conn, setLowBatteryState, onLightingChanged]
+    [conn, setLowBatteryState]
   );
 
   const effectNames = useMemo(() => {
