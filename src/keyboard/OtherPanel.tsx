@@ -244,7 +244,7 @@ export const OtherPanel = ({
           refreshed.core.getPowerSettings.idleTimeoutMs
         )}，深度休眠 ${formatDuration(
           refreshed.core.getPowerSettings.sleepTimeoutMs
-        )}。这些时间会在电池或蓝牙模式下生效。`
+        )}。这些时间会在电池或蓝牙模式下生效；保存后请等待约 2 秒再断开 USB。`
       );
     } catch (e) {
       console.error("Failed to save power settings", e);
