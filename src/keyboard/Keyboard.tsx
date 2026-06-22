@@ -50,6 +50,31 @@ import { useSub } from "../usePubSub";
 
 type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
 
+function summarizePowerResponse(response: any) {
+  const topLevelKeys = Object.entries(response)
+    .filter(([key, value]) => key !== "requestId" && value !== undefined)
+    .map(([key]) => key);
+  const metaKeys = Object.entries(response.meta ?? {})
+    .filter(([, value]) => value !== undefined)
+    .map(([key]) => key);
+  const coreKeys = Object.entries(response.core ?? {})
+    .filter(([, value]) => value !== undefined)
+    .map(([key]) => key);
+
+  return JSON.stringify(
+    {
+      requestId: response.requestId,
+      topLevelKeys,
+      metaKeys,
+      coreKeys,
+      core: response.core ?? null,
+      meta: response.meta ?? null,
+    },
+    null,
+    2
+  );
+}
+
 export interface IndicatorPositionDraft {
   keyPosition: number;
   layerId: number;
@@ -240,6 +265,7 @@ export default function Keyboard({ onReady, onProgress, onLightingChanged }: Key
   const [hasLowBattery, setHasLowBattery] = useState(false);
   const [hasPowerSettings, setHasPowerSettings] = useState(false);
   const [powerLoadError, setPowerLoadError] = useState<string | null>(null);
+  const [powerDebugInfo, setPowerDebugInfo] = useState<string | null>(null);
   const [lightingLoaded, setLightingLoaded] = useState(false);
   const [powerLoaded, setPowerLoaded] = useState(false);
   const [indicatorPositionDraft, setIndicatorPositionDraft] = useState<IndicatorPositionDraft | undefined>(undefined);
@@ -319,6 +345,7 @@ export default function Keyboard({ onReady, onProgress, onLightingChanged }: Key
     setHasLowBattery(false);
     setHasPowerSettings(false);
     setPowerLoadError(null);
+    setPowerDebugInfo(null);
     setLightingLoaded(false);
     setPowerLoaded(false);
   }, [conn]);
@@ -378,12 +405,16 @@ export default function Keyboard({ onReady, onProgress, onLightingChanged }: Key
         return;
       }
 
+      setPowerDebugInfo(summarizePowerResponse(response));
+
       if (response.core?.getPowerSettings !== undefined) {
         setPowerSettings(response.core.getPowerSettings);
         setHasPowerSettings(true);
+        setPowerLoadError(null);
       } else {
         setPowerSettings(null);
         setHasPowerSettings(false);
+        setPowerLoadError("MISSING_FIELD");
       }
     } catch (e) {
       console.error("Failed to load power settings", e);
@@ -391,6 +422,7 @@ export default function Keyboard({ onReady, onProgress, onLightingChanged }: Key
         setPowerSettings(null);
         setHasPowerSettings(false);
         setPowerLoadError(format_rpc_error(e));
+        setPowerDebugInfo(null);
       }
     } finally {
       if (!ignore?.current) {
@@ -937,6 +969,7 @@ export default function Keyboard({ onReady, onProgress, onLightingChanged }: Key
                 setPowerSettings={setPowerSettings}
                 hasPowerSettings={hasPowerSettings}
                 powerLoadError={powerLoadError}
+                powerDebugInfo={powerDebugInfo}
               />
             ) : (
               <LightingControl

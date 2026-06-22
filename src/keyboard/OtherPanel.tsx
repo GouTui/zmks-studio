@@ -27,12 +27,17 @@ interface OtherPanelProps {
   setPowerSettings: React.Dispatch<React.SetStateAction<PowerSettingsState | null>>;
   hasPowerSettings: boolean;
   powerLoadError: string | null;
+  powerDebugInfo: string | null;
 }
 
 type TopFeature = "tapHold" | "power";
 type SubTab = "modtap" | "layertap" | "user";
 
 function explainPowerLoadError(message: string) {
+  if (message === "MISSING_FIELD") {
+    return "The keyboard replied to getPowerSettings, but the reply did not contain core.getPowerSettings.";
+  }
+
   if (message.includes("RPC RPC_NOT_FOUND")) {
     return "RPC_NOT_FOUND: firmware did not expose getPowerSettings. Usually this means the board is still running an older firmware image.";
   }
@@ -62,6 +67,7 @@ export const OtherPanel = ({
   setPowerSettings,
   hasPowerSettings,
   powerLoadError,
+  powerDebugInfo,
 }: OtherPanelProps) => {
   const { t } = useTranslation();
   const { conn } = useContext(ConnectionContext);
@@ -303,6 +309,7 @@ export const OtherPanel = ({
           powerDraft={powerDraft}
           hasPowerSettings={hasPowerSettings}
           powerLoadError={powerLoadError}
+          powerDebugInfo={powerDebugInfo}
           powerDirty={powerDirty}
           powerSaving={powerSaving}
           powerSaveError={powerSaveError}
@@ -604,6 +611,7 @@ const PowerPanel = ({
   powerDraft,
   hasPowerSettings,
   powerLoadError,
+  powerDebugInfo,
   powerDirty,
   powerSaving,
   powerSaveError,
@@ -615,6 +623,7 @@ const PowerPanel = ({
   powerDraft: PowerSettingsState | null;
   hasPowerSettings: boolean;
   powerLoadError: string | null;
+  powerDebugInfo: string | null;
   powerDirty: boolean;
   powerSaving: boolean;
   powerSaveError: string | null;
@@ -646,14 +655,21 @@ const PowerPanel = ({
             </div>
           </>
         ) : (
-          <CenteredHint>
-            {powerLoadError
-              ? explainPowerLoadError(powerLoadError)
-              : t(
-                  "other.power.unsupported",
-                  "This firmware does not expose adjustable idle or deep sleep settings."
-                )}
-          </CenteredHint>
+          <div className="flex flex-col items-center justify-center gap-3 px-6 py-8 text-center">
+            <div className="text-sm text-base-content/70">
+              {powerLoadError
+                ? explainPowerLoadError(powerLoadError)
+                : t(
+                    "other.power.unsupported",
+                    "This firmware does not expose adjustable idle or deep sleep settings."
+                  )}
+            </div>
+            {powerDebugInfo ? (
+              <pre className="max-w-full overflow-auto rounded border border-base-300 bg-base-100/80 p-3 text-left text-xs text-base-content/70">
+                {powerDebugInfo}
+              </pre>
+            ) : null}
+          </div>
         )}
       </div>
     </div>
