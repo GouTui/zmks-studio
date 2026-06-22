@@ -263,7 +263,6 @@ export default function Keyboard({ onReady, onProgress, onLightingChanged }: Key
   const [hasCapsLock, setHasCapsLock] = useState(false);
   const [hasConnection, setHasConnection] = useState(false);
   const [hasLowBattery, setHasLowBattery] = useState(false);
-  const [hasPowerSettings, setHasPowerSettings] = useState(false);
   const [powerLoadError, setPowerLoadError] = useState<string | null>(null);
   const [powerDebugInfo, setPowerDebugInfo] = useState<string | null>(null);
   const [lightingLoaded, setLightingLoaded] = useState(false);
@@ -343,7 +342,6 @@ export default function Keyboard({ onReady, onProgress, onLightingChanged }: Key
     setHasCapsLock(false);
     setHasConnection(false);
     setHasLowBattery(false);
-    setHasPowerSettings(false);
     setPowerLoadError(null);
     setPowerDebugInfo(null);
     setLightingLoaded(false);
@@ -409,18 +407,15 @@ export default function Keyboard({ onReady, onProgress, onLightingChanged }: Key
 
       if (response.core?.getPowerSettings !== undefined) {
         setPowerSettings(response.core.getPowerSettings);
-        setHasPowerSettings(true);
         setPowerLoadError(null);
       } else {
         setPowerSettings(null);
-        setHasPowerSettings(false);
         setPowerLoadError("MISSING_FIELD");
       }
     } catch (e) {
       console.error("Failed to load power settings", e);
       if (!ignore?.current) {
         setPowerSettings(null);
-        setHasPowerSettings(false);
         setPowerLoadError(format_rpc_error(e));
         setPowerDebugInfo(null);
       }
@@ -967,7 +962,6 @@ export default function Keyboard({ onReady, onProgress, onLightingChanged }: Key
                 behaviors={Object.values(behaviors)}
                 powerSettings={powerSettings}
                 setPowerSettings={setPowerSettings}
-                hasPowerSettings={hasPowerSettings}
                 powerLoadError={powerLoadError}
                 powerDebugInfo={powerDebugInfo}
               />

@@ -25,7 +25,6 @@ interface OtherPanelProps {
   behaviors: GetBehaviorDetailsResponse[];
   powerSettings: PowerSettingsState | null;
   setPowerSettings: React.Dispatch<React.SetStateAction<PowerSettingsState | null>>;
-  hasPowerSettings: boolean;
   powerLoadError: string | null;
   powerDebugInfo: string | null;
 }
@@ -65,7 +64,6 @@ export const OtherPanel = ({
   behaviors,
   powerSettings,
   setPowerSettings,
-  hasPowerSettings,
   powerLoadError,
   powerDebugInfo,
 }: OtherPanelProps) => {
@@ -307,7 +305,6 @@ export const OtherPanel = ({
         <PowerPanel
           powerSettings={powerSettings}
           powerDraft={powerDraft}
-          hasPowerSettings={hasPowerSettings}
           powerLoadError={powerLoadError}
           powerDebugInfo={powerDebugInfo}
           powerDirty={powerDirty}
@@ -609,7 +606,6 @@ const PowerSummaryNav = ({
 const PowerPanel = ({
   powerSettings,
   powerDraft,
-  hasPowerSettings,
   powerLoadError,
   powerDebugInfo,
   powerDirty,
@@ -621,7 +617,6 @@ const PowerPanel = ({
 }: {
   powerSettings: PowerSettingsState | null;
   powerDraft: PowerSettingsState | null;
-  hasPowerSettings: boolean;
   powerLoadError: string | null;
   powerDebugInfo: string | null;
   powerDirty: boolean;
@@ -632,11 +627,13 @@ const PowerPanel = ({
   onChange: React.Dispatch<React.SetStateAction<PowerSettingsState | null>>;
 }) => {
   const { t } = useTranslation();
+  const resolvedPowerDraft = powerDraft ?? powerSettings;
+  const canEditPowerSettings = resolvedPowerDraft !== null;
 
   return (
     <div className="flex-1 min-w-0 overflow-y-auto pl-4 py-1">
       <div className="flex flex-col gap-4 animate-fade-in">
-        {hasPowerSettings && powerDraft ? (
+        {canEditPowerSettings ? (
           <>
             <PowerActionBar
               dirty={powerDirty}
@@ -650,7 +647,7 @@ const PowerPanel = ({
                 <PowerSummaryNav powerSettings={powerSettings} />
               </div>
               <div className="min-w-0">
-                <PowerSettingsEditor draft={powerDraft} onChange={onChange} />
+                <PowerSettingsEditor draft={resolvedPowerDraft} onChange={onChange} />
               </div>
             </div>
           </>
