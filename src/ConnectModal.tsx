@@ -5,22 +5,7 @@ import type { RpcTransport } from "@zmkfirmware/zmk-studio-ts-client/transport/i
 import { UserCancelledError } from "@zmkfirmware/zmk-studio-ts-client/transport/errors";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import type { AvailableDevice } from "./tauri/index";
-import {
-  AlertCircle,
-  Bluetooth,
-  Cable,
-  RefreshCw,
-  Languages,
-  Download,
-  X,
-  LoaderCircle,
-  LockKeyhole,
-  Sparkles,
-  Save,
-  PlugZap,
-  RadioTower,
-  CheckCircle2,
-} from "lucide-react";
+import { AlertCircle, Bluetooth, Cable, RefreshCw, Languages, Download, X, LoaderCircle, LockKeyhole } from "lucide-react";
 import {
   Key,
   ListBox,
@@ -199,62 +184,6 @@ function isUsbTransport(transport: TransportFactory) {
   return transport.label.toLowerCase().includes("usb");
 }
 
-function BeginnerStep({
-  icon,
-  title,
-  body,
-}: {
-  icon: ReactNode;
-  title: string;
-  body: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-base-300 bg-base-100/80 p-4">
-      <div className="mb-3 inline-flex rounded-xl bg-base-200 p-2 text-primary">{icon}</div>
-      <div className="text-base font-semibold text-base-content">{title}</div>
-      <div className="mt-2 text-sm leading-6 text-base-content/70">{body}</div>
-    </div>
-  );
-}
-
-function BeginnerGuide() {
-  return (
-    <section className="rounded-3xl border border-primary/15 bg-gradient-to-br from-base-100 via-base-100 to-base-200/70 p-5 shadow-sm">
-      <div className="flex items-start gap-3">
-        <div className="rounded-2xl bg-primary/10 p-3 text-primary">
-          <Sparkles className="size-6" />
-        </div>
-        <div className="min-w-0">
-          <h2 className="text-xl font-semibold text-base-content">第一次使用，按这个顺序最省事</h2>
-          <p className="mt-2 text-sm leading-6 text-base-content/70">
-            先用 USB 连上键盘完成修改和保存，再拔线去测试蓝牙、电池和休眠效果。这样最稳定，也最不容易误判“有没有生效”。
-          </p>
-        </div>
-      </div>
-      <div className="mt-5 grid gap-3 md:grid-cols-3">
-        <BeginnerStep
-          icon={<PlugZap className="size-5" />}
-          title="1. 先用 USB 连接"
-          body="浏览器里最稳的是 USB。先把键盘接上线，再开始配置。"
-        />
-        <BeginnerStep
-          icon={<Save className="size-5" />}
-          title="2. 改完立刻保存"
-          body="改键位、灯光或休眠后，都要点保存，等提示写回键盘。"
-        />
-        <BeginnerStep
-          icon={<RadioTower className="size-5" />}
-          title="3. 再去测蓝牙/电池"
-          body="像休眠、电量提示这类效果，要脱离 USB 后再验证才有意义。"
-        />
-      </div>
-      <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-700">
-        推荐路径：USB 负责“配置和保存”，蓝牙/电池负责“实际使用和验证”。
-      </div>
-    </section>
-  );
-}
-
 function ConnectionMethodCards({
   transports,
   selectedTransport,
@@ -273,7 +202,7 @@ function ConnectionMethodCards({
       transport: transports.find(isUsbTransport),
       description: t(
         "welcome.usbConnectionDescription",
-        "用 USB 连接键盘，适合修改设置和保存到设备"
+        "Connect to the keyboard over USB serial"
       ),
     },
   ];
@@ -288,27 +217,16 @@ function ConnectionMethodCards({
         return (
           <Button
             key={method.id}
-            className="grid grid-cols-[auto_1fr_auto] gap-3 rounded-2xl border border-base-300 bg-base-100/70 p-4 text-left transition-colors duration-150 hover:border-primary hover:bg-base-200 disabled:cursor-not-allowed disabled:opacity-60"
+            className="grid grid-cols-[auto_1fr] gap-3 rounded-md border border-base-300 p-3 text-left transition-colors duration-150 hover:border-primary hover:bg-base-200 disabled:cursor-not-allowed disabled:opacity-60"
             isDisabled={!available || selected}
             onPress={() => method.transport && onSelectTransport?.(method.transport)}
           >
-            <div className="grid size-11 place-items-center rounded-2xl bg-base-200 text-primary">
-              <Icon className="size-6 self-center" />
-            </div>
+            <Icon className="size-6 self-center text-primary" />
             <span className="min-w-0">
-              <span className="block text-base font-semibold">{method.label}</span>
-              <span className="mt-1 block text-sm leading-6 opacity-75">
+              <span className="block font-medium">{method.label}</span>
+              <span className="block text-[0.8rem] opacity-75">
                 {available ? method.description : t("welcome.connectionUnavailableHint")}
               </span>
-            </span>
-            <span
-              className={`self-center rounded-full px-3 py-1 text-xs font-medium ${
-                available
-                  ? "bg-emerald-100 text-emerald-700"
-                  : "bg-base-200 text-base-content/50"
-              }`}
-            >
-              {available ? "推荐" : "不可用"}
             </span>
           </Button>
         );
@@ -516,9 +434,12 @@ function DeviceList({
     <section className="grid gap-3">
       <div className="grid grid-cols-[1fr_auto] items-start gap-3">
         <div>
-          <h2 className="text-lg font-semibold">选择你的键盘</h2>
-          <p className="text-sm leading-6 opacity-75">
-            下面会自动扫描当前可连接的 USB 设备。一般只要认准你的键盘名称，点一下就能继续。
+          <h2 className="text-lg font-semibold">{t("welcome.selectDevice")}</h2>
+          <p className="text-sm opacity-75">
+            {t(
+              "welcome.deviceListHint",
+              "The app scans USB devices automatically. Choose your keyboard to connect."
+            )}
           </p>
         </div>
         <Button
@@ -532,7 +453,7 @@ function DeviceList({
         </Button>
       </div>
 
-      <div className="relative min-h-[14rem] overflow-hidden rounded-2xl border border-base-300 bg-base-100/40">
+      <div className="relative min-h-[14rem] overflow-hidden rounded-md border border-base-300 bg-base-100/30">
         <ListBox
           aria-label="Device"
           items={devices}
@@ -543,7 +464,7 @@ function DeviceList({
         >
           {([transport, device]) => (
             <ListBoxItem
-              className="device-row grid cursor-pointer grid-cols-[auto_1fr] items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-base-300 rac-selected:bg-primary rac-selected:text-primary-content"
+              className="device-row grid cursor-pointer grid-cols-[auto_1fr] items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-base-300 rac-selected:bg-primary rac-selected:text-primary-content"
               id={`${transport.label}:${device.id}`}
               aria-label={device.label}
             >
@@ -744,19 +665,29 @@ function ConnectOptions({
 }
 
 function ClientRecommendation() {
+  const { t } = useTranslation();
+
   return (
-    <section className="grid gap-3 rounded-2xl border border-base-300 bg-base-100/70 p-4 transition-colors duration-150 sm:grid-cols-[1fr_auto] sm:items-center">
+    <section className="grid gap-3 rounded-md border border-base-300 p-3 transition-colors duration-150 sm:grid-cols-[1fr_auto] sm:items-center">
       <div>
-        <p className="font-medium">这版网页先专注把 USB 配置流程做好</p>
-        <p className="text-sm leading-6 opacity-75">
-          建议用桌面版 Chrome 或 Edge 打开，并启用{" "}
-          <ExternalLink href="https://caniuse.com/web-serial">Web Serial</ExternalLink>。
-          蓝牙直连后面再补，现在先把“连接、修改、保存、验证”这条主线做顺。
+        <p className="font-medium">
+          {t("welcome.clientTitle", "USB browser connection is the primary path")}
+        </p>
+        <p className="text-sm opacity-75">
+          {t(
+            "welcome.clientDescriptionPrefix",
+            "Use Chrome or Edge with"
+          )}{" "}
+          <ExternalLink href="https://caniuse.com/web-serial">Web Serial</ExternalLink>{" "}
+          {t(
+            "welcome.clientDescriptionSuffix",
+            "enabled. BLE is intentionally hidden in this build for now."
+          )}
         </p>
       </div>
-      <div className="inline-flex items-center justify-center gap-2 rounded-full bg-base-200 px-4 py-2 text-sm font-medium">
+      <div className="inline-flex items-center justify-center gap-2 rounded-md bg-base-200 px-3 py-2 text-sm">
         <Download className="size-4" />
-        新手推荐路径
+        USB Only
       </div>
     </section>
   );
@@ -815,7 +746,7 @@ export const ConnectModal = ({
   const logoSrc = withBasePath("zmk.svg");
 
   return (
-    <GenericModal ref={dialog} backdropClassName={backdropClassName} className="w-[min(94vw,68rem)] max-h-[90vh] overflow-y-auto">
+    <GenericModal ref={dialog} backdropClassName={backdropClassName} className="w-[min(92vw,42rem)] max-h-[90vh] overflow-y-auto">
       <div className="flex items-start justify-between gap-4">
         <div className="grid grid-cols-[auto_1fr] items-center gap-3">
           <img src={logoSrc} alt="ZMK Logo" className="size-10 rounded-md" />
@@ -870,35 +801,12 @@ export const ConnectModal = ({
           )}
           {displayView === "unlock" && <UnlockStep />}
           {displayView === "options" && (
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(22rem,0.85fr)]">
-              <div className="space-y-4">
-                <BeginnerGuide />
-                {!isDesktopClient && <ClientRecommendation />}
-              </div>
-              <div className="space-y-4 rounded-3xl border border-base-300 bg-base-100/70 p-5 shadow-sm">
-                <div className="flex items-start gap-3">
-                  <div className="rounded-2xl bg-primary/10 p-3 text-primary">
-                    <CheckCircle2 className="size-6" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold text-base-content">开始连接键盘</h2>
-                    <p className="mt-1 text-sm leading-6 text-base-content/70">
-                      只要连上 USB，这里会自动列出可连接的设备。选中你的键盘后，编辑器会自己打开。
-                    </p>
-                  </div>
-                </div>
-                {haveTransports ? (
-                  <ConnectOptions
-                    transports={transports}
-                    onTransportCreated={onTransportCreated}
-                    onConnectionError={onConnectionError}
-                    open={open}
-                  />
-                ) : (
-                  <NoTransportsOptionsPrompt />
-                )}
-              </div>
-            </div>
+            <>
+              {haveTransports
+                ? <ConnectOptions transports={transports} onTransportCreated={onTransportCreated} onConnectionError={onConnectionError} open={open} />
+                : <NoTransportsOptionsPrompt />}
+              {!isDesktopClient && <ClientRecommendation />}
+            </>
           )}
           {footer}
         </div>

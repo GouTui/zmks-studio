@@ -12,7 +12,7 @@ import { useModalRef } from "./misc/useModalRef";
 import { LockStateContext } from "./rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { ConnectionContext } from "./rpc/ConnectionContext";
-import { ChevronDown, Undo2, Redo2, Save, Trash2, Languages, Cable, CheckCircle2 } from "lucide-react";
+import { ChevronDown, Undo2, Redo2, Save, Trash2, Languages } from "lucide-react";
 import { Tooltip } from "./misc/Tooltip";
 import { GenericModal } from "./GenericModal";
 import { useTranslation } from "react-i18next";
@@ -29,35 +29,6 @@ export interface AppHeaderProps {
   onDisconnect?: () => void | Promise<void>;
   canUndo?: boolean;
   canRedo?: boolean;
-}
-
-function HeaderActionButton({
-  label,
-  icon,
-  onPress,
-  disabled,
-  prominent = false,
-}: {
-  label: string;
-  icon: React.ReactNode;
-  onPress?: () => void | Promise<void>;
-  disabled?: boolean;
-  prominent?: boolean;
-}) {
-  return (
-    <Button
-      className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
-        prominent
-          ? "bg-primary text-primary-content enabled:hover:opacity-90"
-          : "border border-base-300 bg-base-100 text-base-content enabled:hover:bg-base-200"
-      } disabled:opacity-50`}
-      isDisabled={disabled}
-      onPress={onPress}
-    >
-      {icon}
-      <span className="hidden sm:inline">{label}</span>
-    </Button>
-  );
 }
 
 export const AppHeader = ({
@@ -100,29 +71,10 @@ export const AppHeader = ({
   );
 
   return (
-    <header className="top-0 left-0 right-0 flex max-w-full items-center justify-between gap-4 border-b border-base-300 bg-base-100/95 px-4 py-3 backdrop-blur">
-      <div className="flex min-w-0 items-center gap-3">
-        <img src={logoSrc} alt="ZMK Logo" className="h-10 rounded-xl" />
-        <div className="min-w-0">
-          <p className="truncate text-base font-semibold">{t("header.studio")}</p>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-base-content/65">
-            <span
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 ${
-                connectedDeviceLabel
-                  ? "bg-emerald-100 text-emerald-700"
-                  : "bg-base-200 text-base-content/60"
-              }`}
-            >
-              {connectedDeviceLabel ? <CheckCircle2 className="size-3.5" /> : <Cable className="size-3.5" />}
-              {connectedDeviceLabel ? "已连接" : "未连接"}
-            </span>
-            <span className="truncate">
-              {connectedDeviceLabel
-                ? "修改后记得点“保存到键盘”"
-                : "先连接键盘，再开始编辑"}
-            </span>
-          </div>
-        </div>
+    <header className="top-0 left-0 right-0 grid grid-cols-[1fr_auto_1fr] items-center justify-between h-10 max-w-full">
+      <div className="flex px-3 items-center gap-1">
+        <img src={logoSrc} alt="ZMK Logo" className="h-8 rounded" />
+        <p>{t("header.studio")}</p>
       </div>
       <GenericModal ref={showSettingsRef} className="max-w-[50vw]">
         <h2 className="my-2 text-lg">{t("header.resetSettings")}</h2>
@@ -148,36 +100,37 @@ export const AppHeader = ({
           </div>
         </div>
       </GenericModal>
-      <div className="flex items-center justify-end gap-2">
-        <MenuTrigger>
-          <Button
-            className="inline-flex max-w-[16rem] items-center gap-2 rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-sm transition-colors hover:bg-base-200 rac-disabled:opacity-50"
-            isDisabled={!connectedDeviceLabel}
-          >
-            <span className="truncate">{connectedDeviceLabel || "当前设备"}</span>
-            <ChevronDown className="inline-block w-4 shrink-0" />
-          </Button>
-          <Popover>
-            <Menu className="overflow-hidden rounded-xl bg-base-100 text-base-content shadow-md">
-              <MenuItem
-                className="px-3 py-2 hover:bg-base-200"
-                onAction={onDisconnect}
-              >
-                {t("header.disconnect")}
-              </MenuItem>
-              <MenuItem
-                className="px-3 py-2 hover:bg-base-200"
-                onAction={() => setShowSettingsReset(true)}
-              >
-                {t("header.restoreStock")}
-              </MenuItem>
-            </Menu>
-          </Popover>
-        </MenuTrigger>
+      <MenuTrigger>
+        <Button
+          className="text-center rac-disabled:opacity-0 hover:bg-base-300 transition-all duration-100 p-1 pl-2 rounded-lg"
+          isDisabled={!connectedDeviceLabel}
+        >
+          {connectedDeviceLabel}
+          <ChevronDown className="inline-block w-4" />
+        </Button>
+        <Popover>
+          <Menu className="shadow-md rounded bg-base-100 text-base-content cursor-pointer overflow-hidden">
+            <MenuItem
+              className="px-2 py-1 hover:bg-base-200"
+              onAction={onDisconnect}
+            >
+              {t("header.disconnect")}
+            </MenuItem>
+            <MenuItem
+              className="px-2 py-1 hover:bg-base-200"
+              onAction={() => setShowSettingsReset(true)}
+            >
+              {t("header.restoreStock")}
+            </MenuItem>
+          </Menu>
+        </Popover>
+      </MenuTrigger>
+      <div className="flex justify-end gap-1 px-2">
         <Tooltip label={t("common.language")}>
           <MenuTrigger>
             <Button
-              className="flex items-center justify-center rounded-xl border border-base-300 bg-base-100 p-2.5 enabled:hover:bg-base-200 disabled:opacity-50"
+              isDisabled={!connectionState.conn}
+              className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
             >
               <Languages className="inline-block w-4" aria-label="Language" />
             </Button>
@@ -201,35 +154,46 @@ export const AppHeader = ({
         </Tooltip>
 
         {onUndo && (
-          <HeaderActionButton
-            label={t("common.undo")}
-            icon={<Undo2 className="inline-block w-4" aria-label="Undo" />}
-            disabled={!canUndo}
-            onPress={onUndo}
-          />
+          <Tooltip label={t("common.undo")}>
+            <Button
+              className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
+              isDisabled={!canUndo}
+              onPress={onUndo}
+            >
+              <Undo2 className="inline-block w-4 mx-1" aria-label="Undo" />
+            </Button>
+          </Tooltip>
         )}
 
         {onRedo && (
-          <HeaderActionButton
-            label={t("common.redo")}
-            icon={<Redo2 className="inline-block w-4" aria-label="Redo" />}
-            disabled={!canRedo}
-            onPress={onRedo}
-          />
+          <Tooltip label={t("common.redo")}>
+            <Button
+              className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
+              isDisabled={!canRedo}
+              onPress={onRedo}
+            >
+              <Redo2 className="inline-block w-4 mx-1" aria-label="Redo" />
+            </Button>
+          </Tooltip>
         )}
-        <HeaderActionButton
-          label="保存到键盘"
-          icon={<Save className="inline-block w-4" aria-label="Save" />}
-          disabled={!unsaved && !extraSaveEnabled}
-          onPress={onSave}
-          prominent
-        />
-        <HeaderActionButton
-          label="放弃改动"
-          icon={<Trash2 className="inline-block w-4" aria-label="Discard" />}
-          disabled={!unsaved}
-          onPress={onDiscard}
-        />
+        <Tooltip label={t("common.save")}>
+          <Button
+            className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
+            isDisabled={!unsaved && !extraSaveEnabled}
+            onPress={onSave}
+          >
+            <Save className="inline-block w-4 mx-1" aria-label="Save" />
+          </Button>
+        </Tooltip>
+        <Tooltip label={t("common.discard")}>
+          <Button
+            className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
+            onPress={onDiscard}
+            isDisabled={!unsaved}
+          >
+            <Trash2 className="inline-block w-4 mx-1" aria-label="Discard" />
+          </Button>
+        </Tooltip>
       </div>
     </header>
   );
